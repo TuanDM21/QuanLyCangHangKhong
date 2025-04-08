@@ -1,58 +1,60 @@
 import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
-import Layout from "./Layout";
-import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
+import Layout from "./Layout"; // your existing Layout component
+import { useNavigation } from "@react-navigation/native";
 
-const ScheduleScreen = () => {
+const FlightScreen = () => {
   const navigation = useNavigation();
 
   return (
     <Layout>
       <View style={styles.container}>
-        <Text style={styles.title}>Lịch trực</Text>
-        
+        <Text style={styles.title}>Chuyến bay</Text>
         <View style={styles.menu}>
-          {/* Tạo lịch trực */}
+
+          {/* Tạo chuyến bay */}
           <TouchableOpacity
             style={styles.menuItem}
-            onPress={() => navigation.navigate("CreateSchedule")}
+            onPress={() => navigation.navigate("CreateFlightScreen")}
           >
-            <Ionicons name="add-circle-outline" size={40} color="white" />
-            <Text style={styles.menuText}>Tạo lịch trực</Text>
+            <Ionicons name="airplane-outline" size={40} color="white" />
+            <Text style={styles.menuText}>Tạo chuyến bay</Text>
           </TouchableOpacity>
 
-          {/* Danh sách lịch trực */}
+          {/* Danh sách chuyến bay */}
           <TouchableOpacity
             style={styles.menuItem}
-            onPress={() => navigation.navigate("ScheduleListScreen")}
+            onPress={() => navigation.navigate("FlightListScreen")}
           >
             <Ionicons name="list-outline" size={40} color="white" />
-            <Text style={styles.menuText}>Danh sách lịch trực</Text>
+            <Text style={styles.menuText}>Danh sách chuyến bay</Text>
           </TouchableOpacity>
 
           {/* Tìm kiếm */}
           <TouchableOpacity
             style={styles.menuItem}
-            onPress={() => navigation.navigate("SearchScheduleScreen")}
+            onPress={() => navigation.navigate("SearchFlightScreen")}
           >
             <Ionicons name="search-outline" size={40} color="white" />
             <Text style={styles.menuText}>Tìm kiếm</Text>
           </TouchableOpacity>
 
-          {/* Áp dụng ca */}
+          {/* Tracking (theo dõi) */}
           <TouchableOpacity
             style={styles.menuItem}
-            onPress={() => navigation.navigate("ApplyShiftScreen")}
+            onPress={() => navigation.navigate("FlightTrackingScreen")}
           >
-            <Ionicons name="checkmark-done-outline" size={40} color="white" />
-            <Text style={styles.menuText}>Áp dụng ca</Text>
+            <Ionicons name="location-outline" size={40} color="white" />
+            <Text style={styles.menuText}>Theo dõi</Text>
           </TouchableOpacity>
         </View>
       </View>
     </Layout>
   );
 };
+
+export default FlightScreen;
 
 const styles = StyleSheet.create({
   container: {
@@ -82,7 +84,7 @@ const styles = StyleSheet.create({
     width: "40%",
     alignItems: "center",
     justifyContent: "center",
-    // Đổ bóng cho Android & iOS
+    // Elevation / shadow
     shadowColor: "#000",
     shadowOpacity: 0.2,
     shadowRadius: 5,
@@ -96,5 +98,3 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
 });
-
-export default ScheduleScreen;

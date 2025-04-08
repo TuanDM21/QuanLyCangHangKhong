@@ -18,11 +18,11 @@ const NewsItem = ({ title, content }) => (
   </View>
 );
 
-const HomeScreen = ({ navigation }) => {
+const HomeScreen = ({ navigation, setIsLoggedIn }) => {
   const [news] = useState(newsData);
 
   return (
-    <Layout navigation={navigation}>
+    <Layout navigation={navigation} setIsLoggedIn={setIsLoggedIn}>
       <View style={styles.container}>
         <Text style={styles.header}>Tin Tức Chính</Text>
         <FlatList
@@ -34,6 +34,7 @@ const HomeScreen = ({ navigation }) => {
     </Layout>
   );
 };
+  
 
 const styles = StyleSheet.create({
   container: {

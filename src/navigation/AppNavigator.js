@@ -9,37 +9,50 @@ import ScheduleScreen from "../screens/ScheduleScreen";
 import CreateScheduleScreen from "../screens/CreateScheduleScreen";
 import UpdateScheduleScreen from "../screens/UpdateScheduleScreen";
 import ScheduleListScreen from "../screens/ScheduleListScreen";
-
+import ProfileScreen from "../screens/ProfileScreen";
+import SearchScheduleScreen from "../screens/SearchScheduleScreen";
+import ApplyShiftScreen from "../screens/ApplyShiftScreen";
+import UpdateUserShiftScreen from "../screens/UpdateUserShiftScreen";
+// import FlightMapScreen from "../screens/FlightMapScreen";
+import FlightScreen from "../screens/FlightScreen";
 const Stack = createStackNavigator();
 
 const AppNavigator = () => {
-  const [isLoggedIn, setIsLoggedIn] = useState(null); // null để xác định trạng thái loading
+  const [isLoggedIn, setIsLoggedIn] = useState(null); 
 
   useEffect(() => {
     const checkLoginStatus = async () => {
       const userToken = await AsyncStorage.getItem("userToken");
-      setIsLoggedIn(userToken ? true : false); // Đảm bảo state được cập nhật chính xác
+      setIsLoggedIn(userToken ? true : false);
     };
     checkLoginStatus();
   }, []);
-  
-  if (isLoggedIn === null) return null; // Đợi kiểm tra xong rồi render
+
+  if (isLoggedIn === null) return null; 
 
   return (
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {!isLoggedIn ? (
-          <Stack.Screen name="Login">
-            {(props) => <LoginScreen {...props} setIsLoggedIn={setIsLoggedIn} />}
+          <Stack.Screen name="Login" options={{ headerShown: false }}>
+            {(props) => <LoginScreen {...props} setIsLoggedIn={setIsLoggedIn}  />}
           </Stack.Screen>
         ) : (
           <>
-            <Stack.Screen name="Home" component={HomeScreen} />
-            <Stack.Screen name="Schedule" component={ScheduleScreen} />
-            <Stack.Screen name="CreateSchedule" component={CreateScheduleScreen} />
-            <Stack.Screen name="UpdateSchedule" component={UpdateScheduleScreen} />
-            <Stack.Screen name="ScheduleListScreen" component={ScheduleListScreen} />
-          </>
+            <Stack.Screen name="Home" options={{ headerShown: false }}>
+              {(props) => <HomeScreen {...props} setIsLoggedIn={setIsLoggedIn} />}
+            </Stack.Screen>
+            <Stack.Screen name="Schedule" component={ScheduleScreen} options={{ headerShown: false }}/>
+            <Stack.Screen name="CreateSchedule" component={CreateScheduleScreen} options={{ headerShown: false }}/>
+            <Stack.Screen name="UpdateSchedule" component={UpdateScheduleScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="ScheduleListScreen" component={ScheduleListScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="ProfileScreen" component={ProfileScreen} options={{headerShown: false}}/>
+            <Stack.Screen name="SearchScheduleScreen" component={SearchScheduleScreen} options={{headerShown: false}}/>
+            <Stack.Screen name="ApplyShiftScreen" component={ApplyShiftScreen} options={{headerShown: false}}/>
+            <Stack.Screen name="UpdateUserShiftScreen" component={UpdateUserShiftScreen} options={{headerShown: false}}/>
+            {/* <Stack.Screen name="FlightMapScreen" component={FlightMapScreen} /> */}
+            <Stack.Screen name="FlightScreen" component={FlightScreen} options={{headerShown: false}}/>
+            </>
         )}
       </Stack.Navigator>
     </NavigationContainer>
@@ -47,4 +60,3 @@ const AppNavigator = () => {
 };
 
 export default AppNavigator;
- 

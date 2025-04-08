@@ -4,7 +4,7 @@ import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNavigation } from "@react-navigation/native";
 
-const Header = () => {
+const Header = ({ setIsLoggedIn }) => {
   const [notificationModalVisible, setNotificationModalVisible] = useState(false);
   const [userModalVisible, setUserModalVisible] = useState(false);
   const navigation = useNavigation();
@@ -19,13 +19,13 @@ const Header = () => {
   ];
 
   const handleLogout = async () => {
-    await AsyncStorage.clear(); // Xóa toàn bộ dữ liệu
-    navigation.reset({
-      index: 0,
-      routes: [{ name: "Login" }],
-    }); // Reset navigation stack về màn hình Login
+    try {
+      await AsyncStorage.removeItem("userToken");
+      setIsLoggedIn(false); // Chuyển về màn hình Login
+    } catch (error) { 
+      console.error("Lỗi khi đăng xuất:", error);
+    }
   };
-
   return (
     <SafeAreaView style={{ backgroundColor: "white" }}>
       <View
@@ -41,8 +41,12 @@ const Header = () => {
           borderBottomColor: "#ddd",
         }}
       >
-        {/* Logo */}
-        <Text style={{ fontSize: 20, fontWeight: "bold", color: "#004080" }}>Dong Hoi Airport</Text>
+              {/* Logo: Bấm vào logo để về trang chủ */}
+              <TouchableOpacity onPress={() => navigation.navigate("Home")}>
+          <Text style={{ fontSize: 20, fontWeight: "bold", color: "#004080" }}>
+            Dong Hoi Airport
+          </Text>
+        </TouchableOpacity>
 
         {/* Bell & User Icon */}
         <View style={{ flexDirection: "row", alignItems: "center" }}>
@@ -97,12 +101,16 @@ const Header = () => {
         <View style={{ flex: 1, justifyContent: "center", backgroundColor: "rgba(0,0,0,0.5)" }}>
           <View style={{ backgroundColor: "white", margin: 20, padding: 20, borderRadius: 10 }}>
             <Text style={{ fontSize: 18, fontWeight: "bold", marginBottom: 10 }}>Tài khoản</Text>
-            <TouchableOpacity style={{ paddingVertical: 10 }}>
-              <Text>Thông tin cá nhân</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={{ paddingVertical: 10 }}>
-              <Text>Đổi mật khẩu</Text>
-            </TouchableOpacity>
+            <TouchableOpacity 
+  style={{ paddingVertical: 10 }}
+  onPress={() => {
+    setUserModalVisible(false); // Đóng modal
+    navigation.navigate("ProfileScreen"); // Điều hướng đến màn hình thông tin cá nhân
+  }}
+>
+  <Text>Thông tin cá nhân</Text>
+</TouchableOpacity>
+
             <TouchableOpacity style={{ paddingVertical: 10 }} onPress={handleLogout}>
   <Text>Đăng xuất</Text>
 </TouchableOpacity>

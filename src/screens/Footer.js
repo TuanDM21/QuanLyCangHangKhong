@@ -23,7 +23,7 @@ const Footer = () => {
 
       <View style={styles.divider} />
 
-      <Pressable style={styles.button} onPress={() => navigation.navigate("FlightSchedule")}>
+      <Pressable style={styles.button} onPress={() => navigation.navigate("FlightScreen")}>
         <Ionicons name="airplane" size={20} color="white" />
         <Text style={styles.buttonText} numberOfLines={2}>
           Lịch trình{"\n"}chuyến bay

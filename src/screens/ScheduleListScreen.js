@@ -1,23 +1,39 @@
-import React, { useState, useEffect } from "react";
-import { View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet, Alert } from "react-native";
+import React, { useState, useCallback } from "react";
+import {
+  View,
+  Text,
+  TextInput,
+  FlatList,
+  TouchableOpacity,
+  StyleSheet,
+  Alert
+} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import Layout from "./Layout";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
 
 const ScheduleListScreen = () => {
   const [schedules, setSchedules] = useState([]);
   const [searchText, setSearchText] = useState("");
   const navigation = useNavigation();
 
-  useEffect(() => {
-    // Giả lập dữ liệu danh sách lịch trực
-    const mockData = [
-      { scheduleId: "LD001", startTime: "08:00", endTime: "16:00", location: "Cổng A2", description: "Ca trực sáng" },
-      { scheduleId: "LD002", startTime: "16:00", endTime: "00:00", location: "Cổng B1", description: "Ca trực chiều" },
-      { scheduleId: "LD003", startTime: "00:00", endTime: "08:00", location: "Cổng C3", description: "Ca trực đêm" },
-    ];
-    setSchedules(mockData);
-  }, []);
+  const fetchShifts = () => {
+    fetch("http://10.0.2.2:8080/api/shifts")
+      .then((res) => res.json())
+      .then((data) => {
+        setSchedules(data);
+      })
+      .catch((err) => {
+        console.error("Lỗi khi fetch shifts:", err);
+      });
+  };
+
+  // Sử dụng useFocusEffect để refresh dữ liệu khi màn hình được focus
+  useFocusEffect(
+    useCallback(() => {
+      fetchShifts();
+    }, [])
+  );
 
   const handleDelete = (id) => {
     Alert.alert(
@@ -25,9 +41,23 @@ const ScheduleListScreen = () => {
       "Bạn có chắc chắn muốn xóa lịch này?",
       [
         { text: "Hủy", style: "cancel" },
-        { 
-          text: "Xóa", 
-          onPress: () => setSchedules(schedules.filter(item => item.scheduleId !== id)) 
+        {
+          text: "Xóa",
+          onPress: async () => {
+            try {
+              const response = await fetch(`http://10.0.2.2:8080/api/shifts/${id}`, {
+                method: "DELETE",
+              });
+              if (response.ok) {
+                setSchedules(schedules.filter((item) => item.id !== id));
+              } else {
+                Alert.alert("Lỗi", "Không thể xóa lịch trực");
+              }
+            } catch (error) {
+              console.error(error);
+              Alert.alert("Lỗi", "Không thể kết nối đến server");
+            }
+          },
         },
       ]
     );
@@ -37,29 +67,40 @@ const ScheduleListScreen = () => {
     navigation.navigate("UpdateSchedule", { schedule: item });
   };
 
-  const filteredSchedules = schedules.filter(item =>
-    item.scheduleId.toLowerCase().includes(searchText.toLowerCase()) ||
-    item.location.toLowerCase().includes(searchText.toLowerCase()) ||
-    item.description.toLowerCase().includes(searchText.toLowerCase())
-  );
+  const filteredSchedules = schedules.filter((item) => {
+    const shiftCode = item.shiftCode ? item.shiftCode.toLowerCase() : "";
+    const location = item.location ? item.location.toLowerCase() : "";
+    const description = item.description ? item.description.toLowerCase() : "";
+    const search = searchText.toLowerCase();
+  
+    return (
+      shiftCode.includes(search) ||
+      location.includes(search) ||
+      description.includes(search)
+    );
+  });
 
   const renderItem = ({ item }) => (
     <View style={styles.card}>
       <View style={styles.row}>
         <Ionicons name="calendar-outline" size={24} color="#007AFF" />
-        <Text style={styles.scheduleId}>{item.scheduleId}</Text>
+        <Text style={styles.scheduleId}>{item.shiftCode}</Text>
       </View>
       <Text style={styles.text}>🕒 {item.startTime} - {item.endTime}</Text>
       <Text style={styles.text}>📍 {item.location}</Text>
       <Text style={styles.text}>📝 {item.description}</Text>
-
       <View style={styles.buttonContainer}>
-        <TouchableOpacity style={[styles.button, styles.updateButton]} onPress={() => handleUpdate(item)}>
+        <TouchableOpacity
+          style={[styles.button, styles.updateButton]}
+          onPress={() => handleUpdate(item)}
+        >
           <Ionicons name="create-outline" size={20} color="white" />
           <Text style={styles.buttonText}>Cập nhật</Text>
         </TouchableOpacity>
-
-        <TouchableOpacity style={[styles.button, styles.deleteButton]} onPress={() => handleDelete(item.scheduleId)}>
+        <TouchableOpacity
+          style={[styles.button, styles.deleteButton]}
+          onPress={() => handleDelete(item.id)}
+        >
           <Ionicons name="trash-outline" size={20} color="white" />
           <Text style={styles.buttonText}>Xóa</Text>
         </TouchableOpacity>
@@ -77,9 +118,9 @@ const ScheduleListScreen = () => {
           value={searchText}
           onChangeText={setSearchText}
         />
-        <FlatList 
+        <FlatList
           data={filteredSchedules}
-          keyExtractor={(item) => item.scheduleId}
+          keyExtractor={(item) => item.id.toString()}
           renderItem={renderItem}
         />
       </View>
