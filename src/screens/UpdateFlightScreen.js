@@ -1,31 +1,50 @@
 import React, { useState, useEffect } from "react";
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  Alert,
-  ActivityIndicator
+import { 
+  View, 
+  Text, 
+  TextInput, 
+  TouchableOpacity, 
+  StyleSheet, 
+  Alert, 
+  ActivityIndicator 
 } from "react-native";
 import { Picker } from "@react-native-picker/picker";
+import { useNavigation, useRoute } from "@react-navigation/native";
 import Layout from "./Layout";
-import { useNavigation } from "@react-navigation/native";
 
-const CreateFlightScreen = () => {
+const UpdateFlightScreen = () => {
   const navigation = useNavigation();
-  const [flightNumber, setFlightNumber] = useState("");
-  const [departureTime, setDepartureTime] = useState("");
-  const [arrivalTime, setArrivalTime] = useState("");
-  const [flightDate, setFlightDate] = useState("");
+  const route = useRoute();
+  const { flight } = route.params;
 
-  // State cho danh sách sân bay và lựa chọn sân bay
+  // Debug: In ra giá trị flight nhận được
+  useEffect(() => {
+    console.log("Flight nhận được trong UpdateFlightScreen:", flight);
+  }, [flight]);
+
+  // Hàm cắt chuỗi thời gian, chỉ lấy "HH:mm"
+  const formatTime = (timeStr) => {
+    if (!timeStr) return "";
+    return timeStr.length >= 5 ? timeStr.substring(0, 5) : timeStr;
+  };
+
+  // State khởi tạo với dữ liệu nhận được
+  const [flightNumber, setFlightNumber] = useState(flight.flightNumber || "");
+  const [selectedDeparture, setSelectedDeparture] = useState(flight.departureAirport || "");
+  const [selectedArrival, setSelectedArrival] = useState(flight.arrivalAirport || "");
+  const [departureTime, setDepartureTime] = useState(
+    flight.departureTime ? formatTime(flight.departureTime) : ""
+  );
+  const [arrivalTime, setArrivalTime] = useState(
+    flight.arrivalTime ? formatTime(flight.arrivalTime) : ""
+  );
+  const [flightDate, setFlightDate] = useState(flight.flightDate || "");
+
+  // State cho danh sách sân bay từ backend và trạng thái loading
   const [airports, setAirports] = useState([]);
   const [loadingAirports, setLoadingAirports] = useState(false);
-  const [selectedDeparture, setSelectedDeparture] = useState("");
-  const [selectedArrival, setSelectedArrival] = useState("");
 
-  // Lấy danh sách sân bay từ backend khi mở màn hình
+  // Lấy danh sách sân bay từ backend khi màn hình mở
   useEffect(() => {
     const fetchAirports = async () => {
       try {
@@ -46,8 +65,8 @@ const CreateFlightScreen = () => {
     fetchAirports();
   }, []);
 
-  const handleCreateFlight = async () => {
-    // Nếu chọn trùng sân bay, không cho phép submit
+  const handleUpdateFlight = async () => {
+    // Kiểm tra nếu chọn trùng sân bay
     if (selectedDeparture === selectedArrival) {
       Alert.alert("Lỗi", "Sân bay khởi hành và hạ cánh không được trùng nhau.");
       return;
@@ -65,9 +84,9 @@ const CreateFlightScreen = () => {
       return;
     }
 
-    const newFlight = {
+    const updatedFlight = {
       flightNumber,
-      departureAirport: selectedDeparture, // lưu mã sân bay
+      departureAirport: selectedDeparture,
       arrivalAirport: selectedArrival,
       departureTime, // định dạng "HH:mm"
       arrivalTime,   // định dạng "HH:mm"
@@ -75,36 +94,31 @@ const CreateFlightScreen = () => {
     };
 
     try {
-      const response = await fetch("http://10.0.2.2:8080/api/flights", {
-        method: "POST",
+      const response = await fetch(`http://10.0.2.2:8080/api/flights/${flight.id}`, {
+        method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newFlight)
+        body: JSON.stringify(updatedFlight)
       });
+
       if (response.ok) {
-        Alert.alert("Thành công", "Tạo chuyến bay thành công", [
+        Alert.alert("Thành công", "Cập nhật chuyến bay thành công", [
           { text: "OK", onPress: () => navigation.goBack() }
         ]);
-        // Reset form
-        setFlightNumber("");
-        setSelectedDeparture("");
-        setSelectedArrival("");
-        setDepartureTime("");
-        setArrivalTime("");
-        setFlightDate("");
       } else {
         const errorText = await response.text();
-        Alert.alert("Lỗi", errorText || "Tạo chuyến bay thất bại.");
+        Alert.alert("Lỗi", errorText || "Cập nhật chuyến bay thất bại");
       }
     } catch (error) {
-      console.error(error);
-      Alert.alert("Lỗi", "Không thể kết nối đến server.");
+      console.error("Update flight error:", error);
+      Alert.alert("Lỗi", "Không thể kết nối đến server");
     }
   };
 
   return (
     <Layout>
       <View style={styles.container}>
-        <Text style={styles.title}>Tạo Chuyến Bay</Text>
+        <Text style={styles.title}>Cập nhật chuyến bay</Text>
+
         <TextInput
           style={styles.input}
           placeholder="Số hiệu chuyến bay"
@@ -172,60 +186,62 @@ const CreateFlightScreen = () => {
           value={flightDate}
           onChangeText={setFlightDate}
         />
-        <TouchableOpacity style={styles.button} onPress={handleCreateFlight}>
-          <Text style={styles.buttonText}>Tạo chuyến bay</Text>
+
+        <TouchableOpacity style={styles.updateButton} onPress={handleUpdateFlight}>
+          <Text style={styles.buttonText}>Cập nhật chuyến bay</Text>
         </TouchableOpacity>
       </View>
     </Layout>
   );
 };
 
-export default CreateFlightScreen;
+export default UpdateFlightScreen;
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: "#E0F2FE",
     padding: 20,
-    backgroundColor: "#E0F2FE"
+    justifyContent: "center",
   },
   title: {
     fontSize: 24,
     fontWeight: "bold",
     marginBottom: 20,
     textAlign: "center",
-    color: "#007AFF"
+    color: "#007AFF",
   },
   label: {
     fontSize: 16,
     fontWeight: "600",
-    marginBottom: 5
+    marginBottom: 5,
   },
   input: {
     backgroundColor: "white",
     padding: 10,
     borderRadius: 5,
     marginBottom: 15,
+    fontSize: 16,
     borderWidth: 1,
     borderColor: "#ccc",
-    fontSize: 16
   },
   pickerContainer: {
     backgroundColor: "white",
     borderWidth: 1,
     borderColor: "#ccc",
     borderRadius: 5,
-    marginBottom: 15
+    marginBottom: 15,
   },
-  button: {
+  updateButton: {
     backgroundColor: "#007AFF",
-    padding: 15,
+    paddingVertical: 15,
     borderRadius: 8,
     alignItems: "center",
-    marginTop: 10
+    marginTop: 10,
   },
   buttonText: {
     color: "white",
     fontWeight: "bold",
-    fontSize: 18
-  }
+    fontSize: 18,
+  },
 });

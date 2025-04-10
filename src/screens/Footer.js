@@ -32,12 +32,12 @@ const Footer = () => {
 
       <View style={styles.divider} />
 
-      <Pressable style={styles.button} onPress={() => navigation.navigate("Attendance")}>
+      {/* <Pressable style={styles.button} onPress={() => navigation.navigate("Attendance")}>
         <Ionicons name="checkmark-done" size={20} color="white" />
         <Text style={styles.buttonText} numberOfLines={2}>
           Kết quả{"\n"}chấm công
         </Text>
-      </Pressable>
+      </Pressable> */}
     </View>
   );
 };

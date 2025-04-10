@@ -15,6 +15,11 @@ import ApplyShiftScreen from "../screens/ApplyShiftScreen";
 import UpdateUserShiftScreen from "../screens/UpdateUserShiftScreen";
 // import FlightMapScreen from "../screens/FlightMapScreen";
 import FlightScreen from "../screens/FlightScreen";
+import CreateFlightScreen from "../screens/CreateFlightScreen";
+import FlightListScreen from "../screens/FlightListScreen";
+import SearchFlightScreen from "../screens/SearchFlightScreen";
+import UpdateFlightScreen from "../screens/UpdateFlightScreen";
+import LiveTrackingScreen from "../screens/LiveTrackingScreen";
 const Stack = createStackNavigator();
 
 const AppNavigator = () => {
@@ -52,6 +57,13 @@ const AppNavigator = () => {
             <Stack.Screen name="UpdateUserShiftScreen" component={UpdateUserShiftScreen} options={{headerShown: false}}/>
             {/* <Stack.Screen name="FlightMapScreen" component={FlightMapScreen} /> */}
             <Stack.Screen name="FlightScreen" component={FlightScreen} options={{headerShown: false}}/>
+            <Stack.Screen name="CreateFlightScreen" component={CreateFlightScreen} options={{headerShown: false}}/>
+            <Stack.Screen name="FlightListScreen" component={FlightListScreen} options={{headerShown: false}}/>
+            <Stack.Screen name="SearchFlightScreen" component={SearchFlightScreen} options={{headerShown: false}}/>
+            <Stack.Screen name="UpdateFlightScreen" component={UpdateFlightScreen} options={{headerShown: false}}/>
+            <Stack.Screen name="LiveTrackingScreen" component={LiveTrackingScreen} options={{headerShown: false}}/>
+
+            
             </>
         )}
       </Stack.Navigator>

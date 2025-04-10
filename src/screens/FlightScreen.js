@@ -1,7 +1,7 @@
 import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import Layout from "./Layout"; // your existing Layout component
+import Layout from "./Layout"; 
 import { useNavigation } from "@react-navigation/native";
 
 const FlightScreen = () => {
@@ -11,8 +11,8 @@ const FlightScreen = () => {
     <Layout>
       <View style={styles.container}>
         <Text style={styles.title}>Chuyến bay</Text>
+        
         <View style={styles.menu}>
-
           {/* Tạo chuyến bay */}
           <TouchableOpacity
             style={styles.menuItem}
@@ -28,7 +28,7 @@ const FlightScreen = () => {
             onPress={() => navigation.navigate("FlightListScreen")}
           >
             <Ionicons name="list-outline" size={40} color="white" />
-            <Text style={styles.menuText}>Danh sách chuyến bay</Text>
+            <Text style={styles.menuText}>Danh sách chuyến bay trong ngày</Text>
           </TouchableOpacity>
 
           {/* Tìm kiếm */}
@@ -40,14 +40,14 @@ const FlightScreen = () => {
             <Text style={styles.menuText}>Tìm kiếm</Text>
           </TouchableOpacity>
 
-          {/* Tracking (theo dõi) */}
-          <TouchableOpacity
+          {/* Nếu cần 4 nút thì mở lại Tracking */}
+          {/* <TouchableOpacity
             style={styles.menuItem}
             onPress={() => navigation.navigate("FlightTrackingScreen")}
           >
             <Ionicons name="location-outline" size={40} color="white" />
             <Text style={styles.menuText}>Theo dõi</Text>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
         </View>
       </View>
     </Layout>
@@ -70,10 +70,12 @@ const styles = StyleSheet.create({
     textAlign: "center",
     color: "#007AFF",
   },
+  // Menu sẽ chia làm 2 cột
   menu: {
     flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-around",
+    flexWrap: "wrap",       // Cho phép xuống dòng
+    justifyContent: "center", 
+    // Có thể chỉnh alignItems, margin, padding nếu muốn
   },
   menuItem: {
     backgroundColor: "#007AFF",
@@ -81,6 +83,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     borderRadius: 15,
     margin: 10,
+    // width "40%" để 2 nút / hàng (cộng với margin => 2 cột)
     width: "40%",
     alignItems: "center",
     justifyContent: "center",
