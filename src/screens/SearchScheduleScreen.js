@@ -98,7 +98,7 @@ const SearchScheduleScreen = () => {
           text: "Xóa",
           onPress: async () => {
             try {
-              const res = await fetch(`http://10.0.2.2:8080/api/user-shifts/${scheduleId}`, {
+              const res = await fetch(`http://10.0.2.2:8080/api/user-shifts/$2025{scheduleId}`, {
                 method: "DELETE"
               });
               if (!res.ok) {

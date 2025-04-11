@@ -2,19 +2,20 @@ import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
-  TextInput,
   Button,
   FlatList,
   TouchableOpacity,
   StyleSheet,
-  Alert
+  Alert,
+  ActivityIndicator
 } from "react-native";
 import { Picker } from "@react-native-picker/picker";
-import { Ionicons } from "@expo/vector-icons";
 import Layout from "./Layout";
+import { Ionicons } from "@expo/vector-icons";
+import DateTimePickerModal from "react-native-modal-datetime-picker";
 
 const ApplyShiftScreen = () => {
-  // State cho danh sách Team, Unit
+  // --- State cho danh sách Team, Unit ---
   const [teams, setTeams] = useState([]);
   const [units, setUnits] = useState([]);
 
@@ -22,41 +23,35 @@ const ApplyShiftScreen = () => {
   const [selectedTeam, setSelectedTeam] = useState("");
   const [selectedUnit, setSelectedUnit] = useState("");
 
-  // Ngày nhập (YYYY-MM-DD)
-  const [shiftDate, setShiftDate] = useState("");
+  // Ngày (kiểu Date) – chọn bằng DateTimePickerModal
+  const [shiftDate, setShiftDate] = useState(null);
+  const [isDatePickerVisible, setDatePickerVisible] = useState(false);
 
-  // Danh sách Users sau khi tìm kiếm
+  // Danh sách Users
   const [users, setUsers] = useState([]);
-  // Mảng userId được chọn (multi-select)
   const [selectedUserIds, setSelectedUserIds] = useState([]);
 
   // Danh sách Shift (ca trực)
   const [shifts, setShifts] = useState([]);
-  // Ca trực được chọn (theo shiftCode)
   const [selectedShiftCode, setSelectedShiftCode] = useState("");
+  
+  // Loading state
+  const [loadingUsers, setLoadingUsers] = useState(false);
 
   // 1. Fetch danh sách Team khi mount
   useEffect(() => {
     fetch("http://10.0.2.2:8080/api/teams")
       .then((res) => res.json())
-      .then((data) => {
-        console.log("Fetched teams:", data);
-        setTeams(data);
-      })
+      .then(setTeams)
       .catch((err) => console.error("Lỗi fetch teams:", err));
   }, []);
 
-  // 2. Khi chọn Team => fetch Unit
+  // 2. Khi chọn Team, fetch Unit
   useEffect(() => {
     if (selectedTeam) {
-      setSelectedUnit("");
-      setUsers([]);
       fetch(`http://10.0.2.2:8080/api/units?teamId=${selectedTeam}`)
         .then((res) => res.json())
-        .then((data) => {
-          console.log("Fetched units:", data);
-          setUnits(data);
-        })
+        .then(setUnits)
         .catch((err) => console.error("Lỗi fetch units:", err));
     } else {
       setUnits([]);
@@ -68,84 +63,106 @@ const ApplyShiftScreen = () => {
   useEffect(() => {
     fetch("http://10.0.2.2:8080/api/shifts")
       .then((res) => res.json())
-      .then((data) => {
-        console.log("Fetched shifts:", data);
-        setShifts(data);
-      })
+      .then(setShifts)
       .catch((err) => console.error("Lỗi fetch shifts:", err));
   }, []);
 
-  // 4. Tìm kiếm user & lấy thông tin shift đã gán
+  // Hàm kiểm tra nếu 1 user đã phục vụ chuyến bay (dựa trên shiftDate và userId)
+  const checkUserAssignment = async (userId) => {
+    if (!shiftDate) return false;
+    const formattedDate = shiftDate.toISOString().split("T")[0];
+    const url = `http://10.0.2.2:8080/api/user-flight-shifts/isAssigned?shiftDate=${formattedDate}&userId=${userId}`;
+    try {
+      const res = await fetch(url);
+      console.log(`checkUserAssignment: userId=${userId}, status=${res.status}`);
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error(`Error response for userId=${userId}:`, errorText);
+        throw new Error("Lỗi kiểm tra ca chuyến bay");
+      }
+      const data = await res.json();
+      console.log(`isAssigned data for userId=${userId}:`, data);
+      return data.assigned;  // true nếu đã phục vụ chuyến bay, false nếu chưa
+    } catch (error) {
+      console.error(`checkUserAssignment error for userId=${userId}:`, error);
+      return false;
+    }
+  };
+
+  // 4. Tìm kiếm user & lấy thông tin ca trực (assignedShiftCode), sau đó với mỗi user, kiểm tra assignment chuyến bay
   const handleSearchUsers = async () => {
     if (!selectedTeam) {
       Alert.alert("Lỗi", "Vui lòng chọn Team!");
       return;
     }
     if (!shiftDate) {
-      Alert.alert("Lỗi", "Vui lòng nhập ngày (YYYY-MM-DD)!");
+      Alert.alert("Lỗi", "Vui lòng chọn ngày!");
       return;
     }
-
+    setLoadingUsers(true);
     try {
-      // API 1: Lấy danh sách user
+      const formattedDate = shiftDate.toISOString().split("T")[0];
+
+      // API lấy danh sách user theo Team/Unit
       let userUrl = `http://10.0.2.2:8080/api/users/filter?teamId=${selectedTeam}`;
       if (selectedUnit) userUrl += `&unitId=${selectedUnit}`;
 
-      // API 2: Lấy danh sách user-shift theo ngày
-      let shiftUrl = `http://10.0.2.2:8080/api/user-shifts/filter?shiftDate=${shiftDate}&teamId=${selectedTeam}`;
+      // API lấy danh sách user-shift (để lấy ca trực)
+      let shiftUrl = `http://10.0.2.2:8080/api/user-shifts/filter?shiftDate=${formattedDate}&teamId=${selectedTeam}`;
       if (selectedUnit) shiftUrl += `&unitId=${selectedUnit}`;
 
       console.log("Fetch userUrl:", userUrl);
       console.log("Fetch shiftUrl:", shiftUrl);
-
-      // Gọi song song 2 API
+      
       const [resUsers, resUserShifts] = await Promise.all([
         fetch(userUrl),
         fetch(shiftUrl)
       ]);
-
       if (!resUsers.ok) {
-        const text = await resUsers.text();
-        throw new Error(text || "Không thể tìm kiếm danh sách nhân viên");
+        throw new Error(await resUsers.text() || "Không thể lấy danh sách nhân viên");
       }
       if (!resUserShifts.ok) {
-        const text = await resUserShifts.text();
-        throw new Error(text || "Không thể lấy danh sách ca của nhân viên");
+        throw new Error(await resUserShifts.text() || "Không thể lấy danh sách ca trực");
       }
 
       const dataUsers = await resUsers.json();
       const dataUserShifts = await resUserShifts.json();
 
-      console.log("Fetched users:", dataUsers);
-      console.log("Fetched userShifts:", dataUserShifts);
-
-      // Xây dựng map userId => shiftCode (nếu user đã có ca)
-      // dataUserShifts là mảng ScheduleDTO => có userId, shiftCode
+      // Xây dựng map: userId => shiftCode
       const shiftMap = {};
       dataUserShifts.forEach((item) => {
-        // Mỗi item đại diện cho 1 user-shift
-        // userId, shiftCode
-        shiftMap[item.userId] = item.shiftCode; 
+        shiftMap[item.userId] = item.shiftCode;
       });
 
-      // Gán assignedShiftCode cho mỗi user
-      const mergedUsers = dataUsers.map((u) => {
+      let mergedUsers = dataUsers.map((u) => {
         const assignedShiftCode = shiftMap[u.id] || null;
         return {
           ...u,
-          assignedShiftCode
+          assignedShiftCode,
+          assignedFlight: false // Ban đầu chưa phục vụ chuyến bay
         };
       });
 
-      setUsers(mergedUsers);
-      setSelectedUserIds([]); // Reset lựa chọn
+      // Với mỗi user, kiểm tra xem đã phục vụ chuyến bay hay chưa thông qua endpoint isAssigned
+      const updatedUsers = await Promise.all(
+        mergedUsers.map(async (user) => {
+          const assigned = await checkUserAssignment(user.id);
+          return { ...user, assignedFlight: assigned };
+        })
+      );
+      
+      console.log("Merged Users:", updatedUsers);
+      setUsers(updatedUsers);
+      setSelectedUserIds([]);
     } catch (error) {
       console.error("Lỗi khi fetch data:", error);
       Alert.alert("Lỗi", error.message || "Có lỗi khi kết nối đến server");
+    } finally {
+      setLoadingUsers(false);
     }
   };
 
-  // 5. Toggle user
+  // 5. Toggle user selection (chỉ cho phép chọn nếu chưa có ca trực và chưa phục vụ chuyến bay)
   const toggleUserSelection = (userId) => {
     if (selectedUserIds.includes(userId)) {
       setSelectedUserIds(selectedUserIds.filter((id) => id !== userId));
@@ -154,10 +171,10 @@ const ApplyShiftScreen = () => {
     }
   };
 
-  // 6. Áp dụng ca
+  // 6. Ví dụ hàm áp dụng ca (giữ nguyên logic gửi payload)
   const handleApplyShift = async () => {
     if (!shiftDate) {
-      Alert.alert("Lỗi", "Vui lòng nhập ngày (YYYY-MM-DD)!");
+      Alert.alert("Lỗi", "Vui lòng chọn ngày!");
       return;
     }
     if (selectedUserIds.length === 0) {
@@ -168,13 +185,13 @@ const ApplyShiftScreen = () => {
       Alert.alert("Lỗi", "Vui lòng chọn ca trực!");
       return;
     }
-
+    const formattedDate = shiftDate.toISOString().split("T")[0];
     const payload = {
-      shiftDate,
+      shiftDate: formattedDate,
       userIds: selectedUserIds,
       shiftCode: selectedShiftCode
     };
-
+    console.log("Applying shift with payload:", payload);
     try {
       const response = await fetch("http://10.0.2.2:8080/api/user-shifts/apply-multi", {
         method: "POST",
@@ -182,41 +199,41 @@ const ApplyShiftScreen = () => {
         body: JSON.stringify(payload)
       });
       if (!response.ok) {
-        const text = await response.text();
-        throw new Error(text || "Không thể áp dụng ca");
+        throw new Error(await response.text() || "Không thể áp dụng ca");
       }
       Alert.alert("Thành công", "Áp dụng ca thành công!");
       setSelectedUserIds([]);
-      setShiftDate("");
-      setSelectedShiftCode("");
-      // Sau khi áp dụng thành công, bạn có thể gọi lại handleSearchUsers() 
-      // nếu muốn cập nhật lại danh sách user (hiển thị shift code mới).
+      await handleSearchUsers(); // Refresh danh sách user sau khi áp dụng
     } catch (error) {
       console.error("Error applying shift:", error);
       Alert.alert("Lỗi", error.message || "Không thể kết nối đến server");
     }
   };
 
-  // Render item
+  // --- Render item ---
+  // Nếu user đã có assignedShiftCode hoặc đã phục vụ chuyến bay, disable chọn và hiển thị thông báo tương ứng.
   const renderUserItem = ({ item }) => {
     const isSelected = selectedUserIds.includes(item.id);
-    // Nếu user đã có assignedShiftCode => hiển thị code ở cuối tên
-    const displayName = item.assignedShiftCode
-      ? `${item.name} - ${item.assignedShiftCode}`
-      : item.name;
-
-    // Nếu user đã có assignedShiftCode => đổi màu nền 
-    // (có thể dùng isAssignedStyle, tùy ý)
-    const userItemStyle = [
-      styles.userItem,
-      isSelected && styles.selectedUserItem,
-      item.assignedShiftCode && styles.assignedUser // highlight user
-    ];
-
+    let displayName = item.name;
+    let disableSelection = false;
+    if (item.assignedFlight) {
+      displayName += " [Đã phục vụ chuyến bay]";
+      disableSelection = true;
+    } else if (item.assignedShiftCode) {
+      displayName += ` [Ca trực: ${item.assignedShiftCode}]`;
+      disableSelection = true;
+    }
     return (
       <TouchableOpacity
-        style={userItemStyle}
-        onPress={() => toggleUserSelection(item.id)}
+        style={[
+          styles.userItem,
+          isSelected && styles.selectedUserItem,
+          (item.assignedFlight || item.assignedShiftCode) && styles.assignedUser
+        ]}
+        onPress={() => {
+          if (!disableSelection) toggleUserSelection(item.id);
+        }}
+        disabled={disableSelection}
       >
         <Text style={styles.userName}>{displayName}</Text>
         {isSelected && <Ionicons name="checkmark-circle" size={24} color="green" />}
@@ -224,28 +241,19 @@ const ApplyShiftScreen = () => {
     );
   };
 
-  // ListHeader: chứa Team, Unit, Ngày, Tìm kiếm
+  // --- Render Header ---
   const ListHeader = () => (
     <View style={styles.headerContainer}>
       <Text style={styles.title}>Áp dụng ca làm việc</Text>
-
       <Text style={styles.label}>Chọn Team:</Text>
       <View style={styles.pickerContainer}>
-        <Picker
-          selectedValue={selectedTeam}
-          onValueChange={(value) => setSelectedTeam(value)}
-        >
+        <Picker selectedValue={selectedTeam} onValueChange={(value) => setSelectedTeam(value)}>
           <Picker.Item label="(Chọn Team)" value="" />
           {teams.map((team) => (
-            <Picker.Item
-              key={team.id}
-              label={team.teamName}
-              value={team.id.toString()}
-            />
+            <Picker.Item key={team.id} label={team.teamName} value={team.id.toString()} />
           ))}
         </Picker>
       </View>
-
       <Text style={styles.label}>Chọn Unit:</Text>
       <View style={styles.pickerContainer}>
         <Picker
@@ -255,50 +263,31 @@ const ApplyShiftScreen = () => {
         >
           <Picker.Item label="(Chọn Unit)" value="" />
           {units.map((unit) => (
-            <Picker.Item
-              key={unit.id}
-              label={unit.unitName}
-              value={unit.id.toString()}
-            />
+            <Picker.Item key={unit.id} label={unit.unitName} value={unit.id.toString()} />
           ))}
         </Picker>
       </View>
-
-      <Text style={styles.label}>Nhập ngày (YYYY-MM-DD):</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="YYYY-MM-DD"
-        value={shiftDate}
-        onChangeText={setShiftDate}
+      <Text style={styles.label}>Chọn ngày:</Text>
+      <TouchableOpacity style={styles.dateButton} onPress={() => setDatePickerVisible(true)}>
+        <Text style={styles.dateText}>
+          {shiftDate ? shiftDate.toISOString().split("T")[0] : "Chọn ngày"}
+        </Text>
+      </TouchableOpacity>
+      <DateTimePickerModal
+        isVisible={isDatePickerVisible}
+        mode="date"
+        onConfirm={(date) => {
+          setShiftDate(date);
+          setDatePickerVisible(false);
+        }}
+        onCancel={() => setDatePickerVisible(false)}
       />
-
       <Button title="Tìm kiếm nhân viên" onPress={handleSearchUsers} />
-
-      {/* Nếu có user, hiển thị picker ca trực */}
-      {users.length > 0 && (
-        <>
-          <Text style={[styles.label, { marginTop: 20 }]}>Chọn ca trực:</Text>
-          <View style={styles.pickerContainer}>
-            <Picker
-              selectedValue={selectedShiftCode}
-              onValueChange={(value) => setSelectedShiftCode(value)}
-            >
-              <Picker.Item label="(Chọn ca)" value="" />
-              {shifts.map((shift) => (
-                <Picker.Item
-                  key={shift.id}
-                  label={shift.shiftCode}
-                  value={shift.shiftCode}
-                />
-              ))}
-            </Picker>
-          </View>
-        </>
-      )}
+      {loadingUsers && <ActivityIndicator size="small" color="#007AFF" style={{ marginTop: 10 }} />}
     </View>
   );
 
-  // ListFooter: chứa nút "Áp dụng ca"
+  // --- Render Footer ---
   const ListFooter = () => (
     <View style={styles.footerContainer}>
       <Button title="Áp dụng ca" onPress={handleApplyShift} />
@@ -307,19 +296,14 @@ const ApplyShiftScreen = () => {
 
   return (
     <Layout>
-      <View style={{ flex: 1 }}>
-        <FlatList
-          data={users}
-          keyExtractor={(item, index) =>
-            item.id ? item.id.toString() : index.toString()
-          }
-          renderItem={renderUserItem}
-          ListHeaderComponent={ListHeader}
-          ListFooterComponent={users.length > 0 ? ListFooter : null}
-          contentContainerStyle={styles.listContainer}
-          nestedScrollEnabled={true} // Cho phép cuộn lồng nếu cần
-        />
-      </View>
+      <FlatList
+        data={users}
+        keyExtractor={(item) => (item.id ? item.id.toString() : String(item))}
+        renderItem={renderUserItem}
+        ListHeaderComponent={ListHeader}
+        ListFooterComponent={users.length > 0 ? ListFooter : null}
+        contentContainerStyle={styles.listContainer}
+      />
     </Layout>
   );
 };
@@ -358,13 +342,18 @@ const styles = StyleSheet.create({
     backgroundColor: "white",
     marginBottom: 10
   },
-  input: {
+  dateButton: {
     backgroundColor: "white",
     padding: 10,
     borderRadius: 5,
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: "#ddd"
+    borderColor: "#ddd",
+    alignItems: "center"
+  },
+  dateText: {
+    fontSize: 16,
+    color: "#333"
   },
   userItem: {
     padding: 10,
@@ -379,9 +368,8 @@ const styles = StyleSheet.create({
   selectedUserItem: {
     backgroundColor: "#d0f0c0"
   },
-  // Highlight user đã có assignedShiftCode
   assignedUser: {
-    backgroundColor: "#ffe4b5" // Màu nền nhạt (Beige) để phân biệt
+    backgroundColor: "#ffe4b5"
   },
   userName: {
     fontSize: 16

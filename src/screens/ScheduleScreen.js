@@ -48,6 +48,13 @@ const ScheduleScreen = () => {
             <Ionicons name="checkmark-done-outline" size={40} color="white" />
             <Text style={styles.menuText}>Áp dụng ca</Text>
           </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => navigation.navigate("ApplyFlightShiftScreen")}
+          >
+            <Ionicons name="checkmark-done-outline" size={40} color="white" />
+            <Text style={styles.menuText}>Áp dụng ca theo chuyến bay</Text>
+          </TouchableOpacity>
         </View>
       </View>
     </Layout>
