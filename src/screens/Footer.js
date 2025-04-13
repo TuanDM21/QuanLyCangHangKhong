@@ -7,14 +7,20 @@ const Footer = () => {
 
   return (
     <View style={styles.footer}>
-      <Pressable style={styles.button} onPress={() => navigation.navigate("Schedule")}>
+      <Pressable
+        style={styles.button}
+        onPress={() => navigation.navigate("Schedule")}
+      >
         <Ionicons name="calendar" size={20} color="white" />
         <Text style={styles.buttonText}>Lịch trực</Text>
       </Pressable>
 
       <View style={styles.divider} />
 
-      <Pressable style={styles.button} onPress={() => navigation.navigate("Activity")}>
+      <Pressable
+        style={styles.button}
+        onPress={() => navigation.navigate("Home")}
+      >
         <Ionicons name="briefcase" size={20} color="white" />
         <Text style={styles.buttonText} numberOfLines={2}>
           Hoạt động{"\n"}đơn vị
@@ -23,7 +29,10 @@ const Footer = () => {
 
       <View style={styles.divider} />
 
-      <Pressable style={styles.button} onPress={() => navigation.navigate("FlightScreen")}>
+      <Pressable
+        style={styles.button}
+        onPress={() => navigation.navigate("FlightScreen")}
+      >
         <Ionicons name="airplane" size={20} color="white" />
         <Text style={styles.buttonText} numberOfLines={2}>
           Lịch trình{"\n"}chuyến bay

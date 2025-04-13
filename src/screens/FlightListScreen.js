@@ -8,11 +8,12 @@ import {
   ActivityIndicator,
   Alert,
   Modal,
-  TextInput
+  TextInput,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import Layout from "./Layout";
+import httpApiClient from "../services";
 
 const FlightListScreen = () => {
   const navigation = useNavigation();
@@ -33,13 +34,9 @@ const FlightListScreen = () => {
   const fetchFlights = async () => {
     setLoading(true);
     try {
-      const res = await fetch("http://10.0.2.2:8080/api/flights/today");
-      // const res = await fetch("http://10.0.10.32:8080/api/flights/today");
-      if (!res.ok) {
-        throw new Error("Không thể lấy danh sách chuyến bay");
-      }
-      const data = await res.json();
-      setFlights(data);
+      const res = await httpApiClient.get("flights/today");
+      const flightsJson = await res.json();
+      setFlights(flightsJson.data);
     } catch (error) {
       Alert.alert("Lỗi", error.message);
     } finally {
@@ -72,11 +69,7 @@ const FlightListScreen = () => {
     updatedFlight[timeType] = newTime;
 
     try {
-      const response = await fetch(`http://10.0.2.2:8080/api/flights/${currentFlightId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(updatedFlight),
-      });
+      const response = await httpApiClient.get(`flights?date=${selectedDate}`);
       if (!response.ok) {
         throw new Error("Cập nhật giờ thất bại");
       }
@@ -100,7 +93,10 @@ const FlightListScreen = () => {
 
   // Live Tracking: nếu actualDepartureTime đã có và khác "00:00" (sau khi được format)
   const renderLiveTracking = (flight) => {
-    if (flight.actualDepartureTime && formatTime(flight.actualDepartureTime) !== "00:00") {
+    if (
+      flight.actualDepartureTime &&
+      formatTime(flight.actualDepartureTime) !== "00:00"
+    ) {
       return (
         <TouchableOpacity
           style={styles.liveBtn}
@@ -178,7 +174,9 @@ const FlightListScreen = () => {
           </Text>
           <TouchableOpacity
             style={styles.updateBtn}
-            onPress={() => handleOpenModal(item.id, "actualDepartureTimeAtArrival")}
+            onPress={() =>
+              handleOpenModal(item.id, "actualDepartureTimeAtArrival")
+            }
           >
             <Text style={styles.btnText}>Cập nhật</Text>
           </TouchableOpacity>
@@ -195,7 +193,11 @@ const FlightListScreen = () => {
       <View style={styles.container}>
         <Text style={styles.title}>Danh Sách Chuyến Bay</Text>
         {loading ? (
-          <ActivityIndicator color="#007AFF" size="large" style={{ marginTop: 20 }} />
+          <ActivityIndicator
+            color="#007AFF"
+            size="large"
+            style={{ marginTop: 20 }}
+          />
         ) : (
           <FlatList
             data={flights}
@@ -225,7 +227,10 @@ const FlightListScreen = () => {
                 <TouchableOpacity style={styles.saveBtn} onPress={updateTime}>
                   <Text style={styles.btnText}>Lưu</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.cancelBtn} onPress={() => setModalVisible(false)}>
+                <TouchableOpacity
+                  style={styles.cancelBtn}
+                  onPress={() => setModalVisible(false)}
+                >
                   <Text style={styles.btnText}>Hủy</Text>
                 </TouchableOpacity>
               </View>

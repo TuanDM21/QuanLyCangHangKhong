@@ -6,26 +6,26 @@ import {
   FlatList,
   TouchableOpacity,
   StyleSheet,
-  Alert
+  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import Layout from "./Layout";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
+import httpApiClient from "../services";
 
 const ScheduleListScreen = () => {
   const [schedules, setSchedules] = useState([]);
   const [searchText, setSearchText] = useState("");
   const navigation = useNavigation();
 
-  const fetchShifts = () => {
-    fetch("http://10.0.2.2:8080/api/shifts")
-      .then((res) => res.json())
-      .then((data) => {
-        setSchedules(data);
-      })
-      .catch((err) => {
-        console.error("Lỗi khi fetch shifts:", err);
-      });
+  const fetchShifts = async () => {
+    try {
+      const response = await httpApiClient.get("shifts");
+      const shiftsJson = await response.json();
+      setSchedules(shiftsJson.data);
+    } catch (err) {
+      console.error("Error fetching shifts:", err);
+    }
   };
 
   // Sử dụng useFocusEffect để refresh dữ liệu khi màn hình được focus
@@ -36,31 +36,21 @@ const ScheduleListScreen = () => {
   );
 
   const handleDelete = (id) => {
-    Alert.alert(
-      "Xác nhận xóa",
-      "Bạn có chắc chắn muốn xóa lịch này?",
-      [
-        { text: "Hủy", style: "cancel" },
-        {
-          text: "Xóa",
-          onPress: async () => {
-            try {
-              const response = await fetch(`http://10.0.2.2:8080/api/shifts/${id}`, {
-                method: "DELETE",
-              });
-              if (response.ok) {
-                setSchedules(schedules.filter((item) => item.id !== id));
-              } else {
-                Alert.alert("Lỗi", "Không thể xóa lịch trực");
-              }
-            } catch (error) {
-              console.error(error);
-              Alert.alert("Lỗi", "Không thể kết nối đến server");
-            }
-          },
+    Alert.alert("Xác nhận xóa", "Bạn có chắc chắn muốn xóa lịch này?", [
+      { text: "Hủy", style: "cancel" },
+      {
+        text: "Xóa",
+        onPress: async () => {
+          try {
+            await httpApiClient.delete(`shifts/${id}`);
+            setSchedules(schedules.filter((item) => item.id !== id));
+          } catch (error) {
+            console.error(error);
+            Alert.alert("Lỗi", "Không thể kết nối đến server");
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
   const handleUpdate = (item) => {
@@ -72,7 +62,7 @@ const ScheduleListScreen = () => {
     const location = item.location ? item.location.toLowerCase() : "";
     const description = item.description ? item.description.toLowerCase() : "";
     const search = searchText.toLowerCase();
-  
+
     return (
       shiftCode.includes(search) ||
       location.includes(search) ||
@@ -86,7 +76,9 @@ const ScheduleListScreen = () => {
         <Ionicons name="calendar-outline" size={24} color="#007AFF" />
         <Text style={styles.scheduleId}>{item.shiftCode}</Text>
       </View>
-      <Text style={styles.text}>🕒 {item.startTime} - {item.endTime}</Text>
+      <Text style={styles.text}>
+        🕒 {item.startTime} - {item.endTime}
+      </Text>
       <Text style={styles.text}>📍 {item.location}</Text>
       <Text style={styles.text}>📝 {item.description}</Text>
       <View style={styles.buttonContainer}>

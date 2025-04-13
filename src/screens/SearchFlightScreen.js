@@ -7,11 +7,12 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
-  Alert
+  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import Layout from "./Layout"; // Component Layout bọc chung giao diện ứng dụng của bạn
 import { useNavigation } from "@react-navigation/native";
+import httpApiClient from "../services";
 
 const SearchFlightScreen = () => {
   const [searchDate, setSearchDate] = useState("");
@@ -28,14 +29,11 @@ const SearchFlightScreen = () => {
     }
     try {
       setLoading(true);
-      // Dùng backticks cho template literal để tạo URL chính xác
-      const url = `http://10.0.2.2:8080/api/flights/searchByDateAndKeyword?date=${searchDate}&keyword=${searchKeyword}`;
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error("Không thể lấy dữ liệu chuyến bay");
-      }
-      const data = await response.json();
-      setFlights(data);
+      const data = await httpApiClient.get(
+        `flights/searchByDateAndKeyword?date=${searchDate}&keyword=${searchKeyword}`
+      );
+      const dataJson = await data.json();
+      setFlights(dataJson.data);
     } catch (error) {
       console.error("Error fetching flights: ", error);
       Alert.alert("Lỗi", error.message);
@@ -59,32 +57,21 @@ const SearchFlightScreen = () => {
 
   // Hàm xử lý xóa chuyến bay
   const handleDelete = (id) => {
-    Alert.alert(
-      "Xác nhận xóa",
-      "Bạn có chắc muốn xóa chuyến bay này?",
-      [
-        { text: "Hủy", style: "cancel" },
-        {
-          text: "Xóa",
-          onPress: async () => {
-            try {
-              const response = await fetch(`http://10.0.2.2:8080/api/flights/${id}`, {
-                method: "DELETE"
-              });
-              if (response.ok) {
-                // Cập nhật lại danh sách sau khi xóa
-                setFlights(flights.filter((item) => item.id !== id));
-              } else {
-                Alert.alert("Lỗi", "Không thể xóa chuyến bay");
-              }
-            } catch (error) {
-              console.error(error);
-              Alert.alert("Lỗi", "Không thể kết nối đến server");
-            }
+    Alert.alert("Xác nhận xóa", "Bạn có chắc muốn xóa chuyến bay này?", [
+      { text: "Hủy", style: "cancel" },
+      {
+        text: "Xóa",
+        onPress: async () => {
+          try {
+            await httpApiClient.delete(`flights/${id}`);
+            setFlights(flights.filter((item) => item.id !== id));
+          } catch (error) {
+            console.error(error);
+            Alert.alert("Lỗi", "Không thể kết nối đến server");
           }
-        }
-      ]
-    );
+        },
+      },
+    ]);
   };
 
   // Render từng item (chuyến bay) trong FlatList
@@ -140,7 +127,11 @@ const SearchFlightScreen = () => {
           <Text style={styles.searchButtonText}>Tìm kiếm</Text>
         </TouchableOpacity>
         {loading ? (
-          <ActivityIndicator size="large" color="#007AFF" style={{ marginTop: 20 }} />
+          <ActivityIndicator
+            size="large"
+            color="#007AFF"
+            style={{ marginTop: 20 }}
+          />
         ) : (
           <FlatList
             data={flights}
@@ -148,7 +139,9 @@ const SearchFlightScreen = () => {
             renderItem={renderItem}
             contentContainerStyle={styles.listContainer}
             ListEmptyComponent={
-              <Text style={styles.emptyText}>Không có chuyến bay nào được tìm thấy.</Text>
+              <Text style={styles.emptyText}>
+                Không có chuyến bay nào được tìm thấy.
+              </Text>
             }
           />
         )}
