@@ -1,37 +1,39 @@
 import React, { useState } from "react";
 import { View, Text, TextInput, Button, Alert } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import httpApiClient from "../services";
 
 const LoginScreen = ({ navigation, setIsLoggedIn }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
   const handleLogin = async () => {
-    try {
-      const response = await fetch("http://10.0.2.2:8080/api/users/login", {
-        // const response = await fetch("http://192.168.1.2:8080/api/users/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
-  
-      const textData = await response.text(); // Lấy dữ liệu thô trước khi parse JSON
-      console.log("Raw Response:", textData); // In ra console để kiểm tra
-  
-      const data = JSON.parse(textData); // Parse JSON sau khi kiểm tra
-  
-      if (response.status === 200) {
-        await AsyncStorage.setItem("userToken", data.token);
-        await AsyncStorage.setItem("user", JSON.stringify(data.user));
-        setIsLoggedIn(true);
-      } else {
-        Alert.alert("Đăng nhập thất bại", data.message);
+    const loginResponse = await httpApiClient.post("auth/login", {
+      json: {
+        email,
+        password,
+      },
+    });
+
+    const loginJson = await loginResponse.json();
+
+    if (loginJson.success) {
+      const { accessToken } = loginJson.data;
+      await AsyncStorage.setItem("userToken", accessToken);
+
+      const profileResponse = await httpApiClient.get("users/me");
+      const profileJson = await profileResponse.json();
+      if (!profileJson.success) {
+        Alert.alert("Lỗi", "Không thể lấy thông tin người dùng");
+        return;
       }
-    } catch (error) {
-      console.error("Lỗi đăng nhập:", error);
+      await AsyncStorage.setItem("user", JSON.stringify(profileJson.data));
+
+      setIsLoggedIn(true);
+    } else {
+      Alert.alert("Đăng nhập thất bại", loginJson.message || "Có lỗi xảy ra");
     }
   };
-  
 
   return (
     <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>

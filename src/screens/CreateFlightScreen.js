@@ -6,11 +6,12 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
-  ActivityIndicator
+  ActivityIndicator,
 } from "react-native";
 import { Picker } from "@react-native-picker/picker";
 import Layout from "./Layout";
 import { useNavigation } from "@react-navigation/native";
+import httpApiClient from "../services";
 
 const CreateFlightScreen = () => {
   const navigation = useNavigation();
@@ -30,12 +31,9 @@ const CreateFlightScreen = () => {
     const fetchAirports = async () => {
       try {
         setLoadingAirports(true);
-        const response = await fetch("http://10.0.2.2:8080/api/airports");
-        if (!response.ok) {
-          throw new Error("Không thể lấy dữ liệu sân bay");
-        }
-        const data = await response.json();
-        setAirports(data);
+        const airports = await httpApiClient.get("airports");
+        const airportsJson = await airports.json();
+        setAirports(airportsJson.data);
       } catch (error) {
         console.error(error);
         Alert.alert("Lỗi", error.message);
@@ -47,12 +45,11 @@ const CreateFlightScreen = () => {
   }, []);
 
   const handleCreateFlight = async () => {
-    // Nếu chọn trùng sân bay, không cho phép submit
     if (selectedDeparture === selectedArrival) {
       Alert.alert("Lỗi", "Sân bay khởi hành và hạ cánh không được trùng nhau.");
       return;
     }
-    // Validate đầy đủ các trường
+
     if (
       !flightNumber ||
       !selectedDeparture ||
@@ -67,34 +64,24 @@ const CreateFlightScreen = () => {
 
     const newFlight = {
       flightNumber,
-      departureAirport: selectedDeparture, // lưu mã sân bay
+      departureAirport: selectedDeparture,
       arrivalAirport: selectedArrival,
-      departureTime, // định dạng "HH:mm"
-      arrivalTime,   // định dạng "HH:mm"
-      flightDate     // định dạng "YYYY-MM-DD"
+      departureTime,
+      arrivalTime,
+      flightDate,
     };
 
     try {
-      const response = await fetch("http://10.0.2.2:8080/api/flights", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newFlight)
-      });
-      if (response.ok) {
-        Alert.alert("Thành công", "Tạo chuyến bay thành công", [
-          { text: "OK", onPress: () => navigation.goBack() }
-        ]);
-        // Reset form
-        setFlightNumber("");
-        setSelectedDeparture("");
-        setSelectedArrival("");
-        setDepartureTime("");
-        setArrivalTime("");
-        setFlightDate("");
-      } else {
-        const errorText = await response.text();
-        Alert.alert("Lỗi", errorText || "Tạo chuyến bay thất bại.");
-      }
+      const response = await httpApiClient.post("flights", { json: newFlight });
+      Alert.alert("Thành công", "Tạo chuyến bay thành công", [
+        { text: "OK", onPress: () => navigation.goBack() },
+      ]);
+      setFlightNumber("");
+      setSelectedDeparture("");
+      setSelectedArrival("");
+      setDepartureTime("");
+      setArrivalTime("");
+      setFlightDate("");
     } catch (error) {
       console.error(error);
       Alert.alert("Lỗi", "Không thể kết nối đến server.");
@@ -186,19 +173,19 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-    backgroundColor: "#E0F2FE"
+    backgroundColor: "#E0F2FE",
   },
   title: {
     fontSize: 24,
     fontWeight: "bold",
     marginBottom: 20,
     textAlign: "center",
-    color: "#007AFF"
+    color: "#007AFF",
   },
   label: {
     fontSize: 16,
     fontWeight: "600",
-    marginBottom: 5
+    marginBottom: 5,
   },
   input: {
     backgroundColor: "white",
@@ -207,25 +194,25 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     borderWidth: 1,
     borderColor: "#ccc",
-    fontSize: 16
+    fontSize: 16,
   },
   pickerContainer: {
     backgroundColor: "white",
     borderWidth: 1,
     borderColor: "#ccc",
     borderRadius: 5,
-    marginBottom: 15
+    marginBottom: 15,
   },
   button: {
     backgroundColor: "#007AFF",
     padding: 15,
     borderRadius: 8,
     alignItems: "center",
-    marginTop: 10
+    marginTop: 10,
   },
   buttonText: {
     color: "white",
     fontWeight: "bold",
-    fontSize: 18
-  }
+    fontSize: 18,
+  },
 });

@@ -6,10 +6,11 @@ import Footer from "./Footer";
 const Layout = ({ children, navigation, setIsLoggedIn }) => {
   return (
     <View style={styles.container}>
-      <Header setIsLoggedIn={setIsLoggedIn} navigation={navigation} />
-      <View style={styles.content}>
-        {children}
-      </View>
+      <Header
+        setIsLoggedIn={setIsLoggedIn || (() => {})}
+        navigation={navigation}
+      />
+      <View style={styles.content}>{children}</View>
       <Footer />
     </View>
   );

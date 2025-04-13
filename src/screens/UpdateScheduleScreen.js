@@ -1,7 +1,15 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from "react-native";
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+} from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import Layout from "./Layout";
+import httpApiClient from "../services";
 
 const UpdateScheduleScreen = () => {
   const navigation = useNavigation();
@@ -24,6 +32,11 @@ const UpdateScheduleScreen = () => {
     }
   }, [schedule]);
 
+  const updateSchedule = async (url, payload) => {
+    const response = await httpApiClient.post(url, { json: payload });
+    return response;
+  };
+
   const handleUpdate = async () => {
     if (!shiftCode || !startTime || !endTime || !location) {
       Alert.alert("Lỗi", "Vui lòng nhập đầy đủ thông tin!");
@@ -39,26 +52,23 @@ const UpdateScheduleScreen = () => {
     };
 
     try {
-      const response = await fetch(`http://10.0.2.2:8080/api/shifts/${schedule.id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
+      const scheduleUpdateResponse = await updateSchedule(
+        `shifts/${schedule.id}`,
+        payload
+      );
 
-      if (response.ok) {
+      if (scheduleUpdateResponse.ok) {
         Alert.alert("Thành công", "Cập nhật lịch trực thành công", [
           {
             text: "OK",
             onPress: () => navigation.goBack(),
           },
         ]);
-      } else if(response.status === 409) {
-        const errorText = await response.text();
-        Alert.alert("Lỗi", errorText);
+      } else if (scheduleUpdateResponse.status === 409) {
+        const errorJson = await scheduleUpdateResponse.json();
+        Alert.alert("Lỗi", errorJson.message || "Mã lịch trực này đã tồn tại");
       } else {
-        Alert.alert("Lỗi", "Mã lịch trực này đã tộn tại");
+        Alert.alert("Lỗi", "Cập nhật lịch trực thất bại");
       }
     } catch (error) {
       console.error("Lỗi khi cập nhật:", error);

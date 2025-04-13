@@ -1,16 +1,17 @@
 import React, { useState, useEffect } from "react";
-import { 
-  View, 
-  Text, 
-  TextInput, 
-  TouchableOpacity, 
-  StyleSheet, 
-  Alert, 
-  ActivityIndicator 
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+  ActivityIndicator,
 } from "react-native";
 import { Picker } from "@react-native-picker/picker";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import Layout from "./Layout";
+import httpApiClient from "../services";
 
 const UpdateFlightScreen = () => {
   const navigation = useNavigation();
@@ -30,8 +31,12 @@ const UpdateFlightScreen = () => {
 
   // State khởi tạo với dữ liệu nhận được
   const [flightNumber, setFlightNumber] = useState(flight.flightNumber || "");
-  const [selectedDeparture, setSelectedDeparture] = useState(flight.departureAirport || "");
-  const [selectedArrival, setSelectedArrival] = useState(flight.arrivalAirport || "");
+  const [selectedDeparture, setSelectedDeparture] = useState(
+    flight.departureAirport || ""
+  );
+  const [selectedArrival, setSelectedArrival] = useState(
+    flight.arrivalAirport || ""
+  );
   const [departureTime, setDepartureTime] = useState(
     flight.departureTime ? formatTime(flight.departureTime) : ""
   );
@@ -49,12 +54,9 @@ const UpdateFlightScreen = () => {
     const fetchAirports = async () => {
       try {
         setLoadingAirports(true);
-        const response = await fetch("http://10.0.2.2:8080/api/airports");
-        if (!response.ok) {
-          throw new Error("Không thể lấy dữ liệu sân bay");
-        }
-        const data = await response.json();
-        setAirports(data);
+        const airports = await httpApiClient.get("airports");
+        const airportsJson = await airports.json();
+        setAirports(airportsJson.data);
       } catch (error) {
         console.error(error);
         Alert.alert("Lỗi", error.message);
@@ -89,24 +91,22 @@ const UpdateFlightScreen = () => {
       departureAirport: selectedDeparture,
       arrivalAirport: selectedArrival,
       departureTime, // định dạng "HH:mm"
-      arrivalTime,   // định dạng "HH:mm"
-      flightDate     // định dạng "YYYY-MM-DD"
+      arrivalTime, // định dạng "HH:mm"
+      flightDate, // định dạng "YYYY-MM-DD"
     };
 
     try {
-      const response = await fetch(`http://10.0.2.2:8080/api/flights/${flight.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(updatedFlight)
+      const response = await httpApiClient.post(`flights/${flight.id}`, {
+        json: updatedFlight,
       });
 
       if (response.ok) {
         Alert.alert("Thành công", "Cập nhật chuyến bay thành công", [
-          { text: "OK", onPress: () => navigation.goBack() }
+          { text: "OK", onPress: () => navigation.goBack() },
         ]);
       } else {
-        const errorText = await response.text();
-        Alert.alert("Lỗi", errorText || "Cập nhật chuyến bay thất bại");
+        const errorJson = await response.json();
+        Alert.alert("Lỗi", errorJson.message || "Cập nhật chuyến bay thất bại");
       }
     } catch (error) {
       console.error("Update flight error:", error);
@@ -187,7 +187,10 @@ const UpdateFlightScreen = () => {
           onChangeText={setFlightDate}
         />
 
-        <TouchableOpacity style={styles.updateButton} onPress={handleUpdateFlight}>
+        <TouchableOpacity
+          style={styles.updateButton}
+          onPress={handleUpdateFlight}
+        >
           <Text style={styles.buttonText}>Cập nhật chuyến bay</Text>
         </TouchableOpacity>
       </View>

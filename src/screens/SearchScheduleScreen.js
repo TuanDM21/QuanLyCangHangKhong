@@ -7,12 +7,13 @@ import {
   Alert,
   FlatList,
   StyleSheet,
-  TouchableOpacity
+  TouchableOpacity,
 } from "react-native";
 import { Picker } from "@react-native-picker/picker";
 import Layout from "./Layout";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
+import httpApiClient from "../services";
 
 const SearchScheduleScreen = () => {
   // State cho ngày, team, unit
@@ -29,22 +30,28 @@ const SearchScheduleScreen = () => {
 
   // 1. Fetch danh sách Team
   useEffect(() => {
-    fetch("http://10.0.2.2:8080/api/teams")
-      .then((res) => res.json())
-      .then((data) => {
-        console.log("Fetched teams:", data);
-        setTeams(data);
-      })
-      .catch((err) => console.error("Lỗi khi fetch teams:", err));
+    fetchTeams();
   }, []);
+
+  const fetchTeams = async () => {
+    try {
+      const teams = await httpApiClient.get("teams");
+      const teamsJson = await teams.json();
+      setTeams(teamsJson.data);
+    } catch (error) {
+      console.error("Error fetching teams:", error);
+      Alert.alert("Error", "Unable to fetch teams");
+    }
+  };
 
   // 2. Khi chọn Team => fetch Unit
   useEffect(() => {
     if (selectedTeam) {
       setSelectedUnit("");
       setSearchResults([]);
-      fetch(`http://10.0.2.2:8080/api/units?teamId=${selectedTeam}`)
-        .then((res) => res.json())
+      httpApiClient
+        .get(`units?teamId=${selectedTeam}`)
+        .json()
         .then((data) => {
           console.log("Fetched units:", data);
           setUnits(data);
@@ -63,17 +70,12 @@ const SearchScheduleScreen = () => {
       return;
     }
     try {
-      let url = `http://10.0.2.2:8080/api/user-shifts/filter?shiftDate=${shiftDate}`;
+      let url = `user-shifts/filter?shiftDate=${shiftDate}`;
       if (selectedTeam) url += `&teamId=${selectedTeam}`;
       if (selectedUnit) url += `&unitId=${selectedUnit}`;
 
       console.log("Fetch URL:", url);
-      const response = await fetch(url);
-      if (!response.ok) {
-        const text = await response.text();
-        throw new Error(text || "Không thể tìm kiếm lịch trực");
-      }
-      const data = await response.json();
+      const data = await httpApiClient.get(url).json();
       console.log("Fetched schedules:", data);
       setSearchResults(data);
     } catch (error) {
@@ -89,32 +91,24 @@ const SearchScheduleScreen = () => {
 
   // Xử lý Xóa
   const handleDelete = async (scheduleId) => {
-    Alert.alert(
-      "Xác nhận xóa",
-      "Bạn có chắc chắn muốn xóa lịch trực này?",
-      [
-        { text: "Hủy", style: "cancel" },
-        {
-          text: "Xóa",
-          onPress: async () => {
-            try {
-              const res = await fetch(`http://10.0.2.2:8080/api/user-shifts/$2025{scheduleId}`, {
-                method: "DELETE"
-              });
-              if (!res.ok) {
-                const text = await res.text();
-                throw new Error(text || "Không thể xóa lịch trực");
-              }
-              // Xóa thành công => cập nhật lại danh sách
-              setSearchResults(searchResults.filter((item) => item.scheduleId !== scheduleId));
-            } catch (error) {
-              console.error("Lỗi khi xóa:", error);
-              Alert.alert("Lỗi", error.message);
-            }
+    Alert.alert("Xác nhận xóa", "Bạn có chắc chắn muốn xóa lịch trực này?", [
+      { text: "Hủy", style: "cancel" },
+      {
+        text: "Xóa",
+        onPress: async () => {
+          try {
+            await httpApiClient.delete(`user-shifts/${scheduleId}`);
+            // Xóa thành công => cập nhật lại danh sách
+            setSearchResults(
+              searchResults.filter((item) => item.scheduleId !== scheduleId)
+            );
+          } catch (error) {
+            console.error("Lỗi khi xóa:", error);
+            Alert.alert("Lỗi", error.message);
           }
-        }
-      ]
-    );
+        },
+      },
+    ]);
   };
 
   // Render item
@@ -142,7 +136,9 @@ const SearchScheduleScreen = () => {
       </Text>
       <Text style={styles.resultText}>
         <Text style={styles.label}>Thời gian: </Text>
-        {item.startTime && item.endTime ? `${item.startTime} - ${item.endTime}` : "N/A"}
+        {item.startTime && item.endTime
+          ? `${item.startTime} - ${item.endTime}`
+          : "N/A"}
       </Text>
       <Text style={styles.resultText}>
         <Text style={styles.label}>Vị trí: </Text>
@@ -164,7 +160,10 @@ const SearchScheduleScreen = () => {
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.actionButton, { backgroundColor: "#FF3B30", marginTop: 8 }]}
+          style={[
+            styles.actionButton,
+            { backgroundColor: "#FF3B30", marginTop: 8 },
+          ]}
           onPress={() => handleDelete(item.scheduleId)}
         >
           <Ionicons name="trash-outline" size={20} color="white" />
@@ -178,7 +177,9 @@ const SearchScheduleScreen = () => {
     <Layout>
       <FlatList
         data={searchResults}
-        keyExtractor={(item, index) => (item.scheduleId ? item.scheduleId.toString() : index.toString())}
+        keyExtractor={(item, index) =>
+          item.scheduleId ? item.scheduleId.toString() : index.toString()
+        }
         renderItem={renderItem}
         ListHeaderComponent={
           <View style={styles.headerContainer}>
@@ -201,7 +202,11 @@ const SearchScheduleScreen = () => {
               >
                 <Picker.Item label="(Chọn Team)" value="" />
                 {teams.map((team) => (
-                  <Picker.Item key={team.id} label={team.teamName} value={team.id.toString()} />
+                  <Picker.Item
+                    key={team.id}
+                    label={team.teamName}
+                    value={team.id.toString()}
+                  />
                 ))}
               </Picker>
             </View>
@@ -216,7 +221,11 @@ const SearchScheduleScreen = () => {
               >
                 <Picker.Item label="(Chọn Unit)" value="" />
                 {units.map((unit) => (
-                  <Picker.Item key={unit.id} label={unit.unitName} value={unit.id.toString()} />
+                  <Picker.Item
+                    key={unit.id}
+                    label={unit.unitName}
+                    value={unit.id.toString()}
+                  />
                 ))}
               </Picker>
             </View>
@@ -227,7 +236,9 @@ const SearchScheduleScreen = () => {
         contentContainerStyle={styles.listContainer}
         ListEmptyComponent={
           searchResults.length === 0 && shiftDate ? (
-            <Text style={{ textAlign: "center", marginTop: 20 }}>Không có kết quả</Text>
+            <Text style={{ textAlign: "center", marginTop: 20 }}>
+              Không có kết quả
+            </Text>
           ) : null
         }
       />
@@ -239,17 +250,17 @@ export default SearchScheduleScreen;
 
 const styles = StyleSheet.create({
   listContainer: {
-    paddingBottom: 20
+    paddingBottom: 20,
   },
   headerContainer: {
     padding: 20,
-    backgroundColor: "#CFE2FF"
+    backgroundColor: "#CFE2FF",
   },
   title: {
     fontSize: 22,
     fontWeight: "bold",
     marginBottom: 15,
-    textAlign: "center"
+    textAlign: "center",
   },
   input: {
     backgroundColor: "white",
@@ -257,34 +268,34 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: "#ddd"
+    borderColor: "#ddd",
   },
   pickerContainer: {
     borderWidth: 1,
     borderColor: "#ddd",
     borderRadius: 5,
     backgroundColor: "white",
-    marginBottom: 10
+    marginBottom: 10,
   },
   label: {
     fontWeight: "600",
-    marginBottom: 5
+    marginBottom: 5,
   },
   resultCard: {
     backgroundColor: "white",
     padding: 10,
     borderRadius: 5,
     margin: 10,
-    position: "relative"
+    position: "relative",
   },
   resultText: {
     fontSize: 14,
-    marginBottom: 4
+    marginBottom: 4,
   },
   actionContainer: {
     position: "absolute",
     top: "50%", // Đặt ở giữa theo chiều dọc
-    right: 10,  // Cách mép phải 10 đơn vị
+    right: 10, // Cách mép phải 10 đơn vị
     transform: [{ translateY: -20 }], // Dịch lên để căn giữa (điều chỉnh giá trị này tùy theo kích thước nút)
     flexDirection: "column",
     alignItems: "center",
@@ -300,7 +311,7 @@ const styles = StyleSheet.create({
   actionButtonText: {
     color: "white",
     marginLeft: 5,
-    fontWeight: "600"
+    fontWeight: "600",
   },
   resultText: {
     fontSize: 14,

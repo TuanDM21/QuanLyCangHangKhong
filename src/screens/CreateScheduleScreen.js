@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { View, Text, TextInput, Button, StyleSheet, Alert } from "react-native";
 import Layout from "./Layout";
 import { useNavigation } from "@react-navigation/native";
+import httpApiClient from "../services";
 
 const CreateScheduleScreen = () => {
   const [scheduleId, setScheduleId] = useState("");
@@ -9,7 +10,7 @@ const CreateScheduleScreen = () => {
   const [endTime, setEndTime] = useState("");
   const [location, setLocation] = useState("");
   const [description, setDescription] = useState("");
-  
+
   const navigation = useNavigation();
 
   const validateTime = (time) => {
@@ -17,37 +18,44 @@ const CreateScheduleScreen = () => {
     return regex.test(time);
   };
 
+  const createSchedule = async (payload) => {
+    const response = await httpApiClient.post("shifts", { json: payload });
+    return response;
+  };
+
   const handleSubmit = async () => {
-    if (!scheduleId || !validateTime(startTime) || !validateTime(endTime) || !location) {
+    if (
+      !scheduleId ||
+      !validateTime(startTime) ||
+      !validateTime(endTime) ||
+      !location
+    ) {
       Alert.alert("Lỗi", "Vui lòng nhập đầy đủ thông tin và đúng định dạng!");
       return;
     }
-  
+
     // Chuẩn bị payload để gửi lên server
     const payload = {
       shiftCode: scheduleId,
-      startTime: startTime,      // "HH:mm" (hoặc "HH:mm:ss")
-      endTime: endTime,          // "HH:mm" (hoặc "HH:mm:ss")
+      startTime: startTime, // "HH:mm" (hoặc "HH:mm:ss")
+      endTime: endTime, // "HH:mm" (hoặc "HH:mm:ss")
       location: location,
       description: description,
     };
-  
+
     try {
-      const response = await fetch("http://10.0.2.2:8080/api/shifts", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
-  
+      const response = await createSchedule(payload);
+
       if (response.ok) {
         const data = await response.json();
         Alert.alert(
           "Thành công",
           `Lịch trực đã được lưu vào DB với ID = ${data.shiftCode}`,
           [
-            { text: "OK", onPress: () => navigation.navigate("ScheduleListScreen") }
+            {
+              text: "OK",
+              onPress: () => navigation.navigate("ScheduleListScreen"),
+            },
           ]
         );
       } else {

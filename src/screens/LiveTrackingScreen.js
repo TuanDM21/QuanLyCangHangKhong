@@ -4,6 +4,7 @@ import MapView, { Marker, Polyline } from "react-native-maps";
 import { Ionicons } from "@expo/vector-icons";
 import { useRoute } from "@react-navigation/native";
 import Layout from "./Layout";
+import httpApiClient from "../services";
 
 const LiveTrackingScreen = () => {
   const route = useRoute();
@@ -13,7 +14,9 @@ const LiveTrackingScreen = () => {
   if (!flight) {
     return (
       <View style={styles.loadingContainer}>
-        <Text style={styles.errorText}>Không tìm thấy thông tin chuyến bay.</Text>
+        <Text style={styles.errorText}>
+          Không tìm thấy thông tin chuyến bay.
+        </Text>
       </View>
     );
   }
@@ -39,13 +42,9 @@ const LiveTrackingScreen = () => {
     const fetchAirports = async () => {
       setLoadingAirports(true);
       try {
-        // Cập nhật URL API của bạn
-        const res = await fetch("http://10.0.2.2:8080/api/airports");
-        if (!res.ok) {
-          throw new Error("Không thể lấy dữ liệu sân bay");
-        }
-        const data = await res.json();
-        setAirports(data);
+        const airports = await httpApiClient.get("airports");
+        const airportsJson = await airports.json();
+        setAirports(airportsJson.data);
       } catch (error) {
         Alert.alert("Lỗi", error.message);
       } finally {
@@ -68,8 +67,14 @@ const LiveTrackingScreen = () => {
       Alert.alert("Lỗi", "Không tìm thấy tọa độ của sân bay được chọn.");
       return;
     }
-    const depCoords = { latitude: depAirport.latitude, longitude: depAirport.longitude };
-    const arrCoords = { latitude: arrAirport.latitude, longitude: arrAirport.longitude };
+    const depCoords = {
+      latitude: depAirport.latitude,
+      longitude: depAirport.longitude,
+    };
+    const arrCoords = {
+      latitude: arrAirport.latitude,
+      longitude: arrAirport.longitude,
+    };
     setOrigin(depCoords);
     setDestination(arrCoords);
     setMarkerPosition(depCoords);
@@ -101,21 +106,25 @@ const LiveTrackingScreen = () => {
     const lon2 = (end.longitude * Math.PI) / 180;
     const dLon = lon2 - lon1;
     const y = Math.sin(dLon) * Math.cos(lat2);
-    const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
+    const x =
+      Math.cos(lat1) * Math.sin(lat2) -
+      Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
     let brng = Math.atan2(y, x) * (180 / Math.PI);
     brng = (brng + 360) % 360;
     return brng;
   };
 
   // Tính bearing của chuyến bay dựa trên origin và destination
-  const bearing = (origin && destination) ? calculateBearing(origin, destination) : 0;
+  const bearing =
+    origin && destination ? calculateBearing(origin, destination) : 0;
 
   // Cập nhật vị trí marker theo thời gian thực (cập nhật mỗi 1 giây)
   useEffect(() => {
     if (!origin || !destination) return;
     const intervalId = setInterval(() => {
       const now = new Date();
-      let currentSeconds = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+      let currentSeconds =
+        now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
       // Nếu chuyến bay qua đêm và giờ hiện tại thuộc sáng (số giây thấp), cộng thêm 24 giờ
       if (currentSeconds < depSeconds) {
         currentSeconds += 24 * 3600;
@@ -128,9 +137,15 @@ const LiveTrackingScreen = () => {
       } else {
         progress = (currentSeconds - depSeconds) / (arrSeconds - depSeconds);
       }
-      const currentLatitude = origin.latitude + (destination.latitude - origin.latitude) * progress;
-      const currentLongitude = origin.longitude + (destination.longitude - origin.longitude) * progress;
-      setMarkerPosition({ latitude: currentLatitude, longitude: currentLongitude });
+      const currentLatitude =
+        origin.latitude + (destination.latitude - origin.latitude) * progress;
+      const currentLongitude =
+        origin.longitude +
+        (destination.longitude - origin.longitude) * progress;
+      setMarkerPosition({
+        latitude: currentLatitude,
+        longitude: currentLongitude,
+      });
     }, 1000);
     return () => clearInterval(intervalId);
   }, [depSeconds, arrSeconds, origin, destination]);
@@ -147,8 +162,14 @@ const LiveTrackingScreen = () => {
   const region = {
     latitude: (origin.latitude + destination.latitude) / 2,
     longitude: (origin.longitude + destination.longitude) / 2,
-    latitudeDelta: Math.max(Math.abs(origin.latitude - destination.latitude) * 2, 8),
-    longitudeDelta: Math.max(Math.abs(origin.longitude - destination.longitude) * 2, 8),
+    latitudeDelta: Math.max(
+      Math.abs(origin.latitude - destination.latitude) * 2,
+      8
+    ),
+    longitudeDelta: Math.max(
+      Math.abs(origin.longitude - destination.longitude) * 2,
+      8
+    ),
   };
 
   return (
@@ -156,9 +177,17 @@ const LiveTrackingScreen = () => {
       <View style={styles.container}>
         <MapView style={styles.map} initialRegion={region}>
           {/* Vẽ đường bay nối origin và destination */}
-          <Polyline coordinates={[origin, destination]} strokeColor="#007AFF" strokeWidth={3} />
+          <Polyline
+            coordinates={[origin, destination]}
+            strokeColor="#007AFF"
+            strokeWidth={3}
+          />
           {/* Marker cho máy bay với rotation dựa trên bearing */}
-          <Marker coordinate={markerPosition} rotation={bearing} anchor={{ x: 0.5, y: 0.5 }}>
+          <Marker
+            coordinate={markerPosition}
+            rotation={bearing}
+            anchor={{ x: 0.5, y: 0.5 }}
+          >
             <Ionicons name="airplane" size={30} color="red" />
           </Marker>
           {/* Marker cho sân bay khởi hành */}
@@ -173,12 +202,15 @@ const LiveTrackingScreen = () => {
           </Marker>
         </MapView>
         <View style={styles.infoContainer}>
-          <Text style={styles.infoText}>Live Tracking chuyến bay: {flight.flightNumber}</Text>
+          <Text style={styles.infoText}>
+            Live Tracking chuyến bay: {flight.flightNumber}
+          </Text>
           <Text style={styles.infoText}>
             Từ {flight.departureAirport} đến {flight.arrivalAirport}
           </Text>
           <Text style={styles.infoText}>
-            Thời gian thực: {flight.actualDepartureTime} - {flight.actualArrivalTime}
+            Thời gian thực: {flight.actualDepartureTime} -{" "}
+            {flight.actualArrivalTime}
           </Text>
         </View>
       </View>
