@@ -15,6 +15,30 @@ import { Ionicons } from "@expo/vector-icons";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import httpApiClient from "../services";
 
+// Hàm fetch tách biệt, KHÔNG gọi setUnits/setShifts trực tiếp.
+// Thay vào đó, nó trả về một đối tượng { units, shifts } cho component dùng.
+const fetchUnitsAndShifts = async (teamId) => {
+  // 1) Gọi API lấy danh sách units của team
+  const unitsRes = await httpApiClient.get(`units?teamId=${teamId}`);
+  if (!unitsRes.ok) {
+    throw new Error("Không thể fetch units!");
+  }
+  const unitsJson = await unitsRes.json();
+
+  // 2) Gọi API lấy danh sách shifts
+  const shiftsRes = await httpApiClient.get("shifts");
+  if (!shiftsRes.ok) {
+    throw new Error("Không thể fetch shifts!");
+  }
+  const shiftsJson = await shiftsRes.json();
+
+  // Trả về kết quả cho component
+  return {
+    units: unitsJson.data,    // Mảng đơn vị
+    shifts: shiftsJson.data,  // Mảng ca trực
+  };
+};
+
 const ApplyShiftScreen = () => {
   // --- State cho danh sách Team, Unit ---
   const [teams, setTeams] = useState([]);
@@ -42,51 +66,67 @@ const ApplyShiftScreen = () => {
   // 1. Fetch danh sách Team khi mount
   useEffect(() => {
     const fetchTeams = async () => {
-      const teamsResponse = await httpApiClient.get("teams");
-      if (!teamsResponse.ok) {
-        console.error("Lỗi fetch teams:", teamsResponse.status);
-        return;
+      try {
+        const teamsResponse = await httpApiClient.get("teams");
+        if (!teamsResponse.ok) {
+          console.error("Lỗi fetch teams:", teamsResponse.status);
+          return;
+        }
+        const teamsJson = await teamsResponse.json();
+        setTeams(teamsJson.data);
+      } catch (err) {
+        console.error("Lỗi fetch teams:", err);
       }
-      const teamsJson = await teamsResponse.json();
-      setTeams(teamsJson.data);
     };
 
     fetchTeams();
   }, []);
 
-  // 2. Khi chọn Team, fetch Unit
+  // 2. Khi chọn Team, fetch Unit + Shift
   useEffect(() => {
     if (selectedTeam) {
+      // Mỗi khi chọn team, ta fetch units & shifts
       fetchUnitsAndShifts(selectedTeam)
         .then(({ units, shifts }) => {
-          setUnits(units);
-          setShifts(shifts);
+          setUnits(units || []);
+          setShifts(shifts || []);
         })
         .catch((err) => console.error("Lỗi fetch units và shifts:", err));
+      // Reset users danh sách & selectedUnit
+      setSelectedUnit("");
+      setUsers([]);
     } else {
+      // Nếu chưa chọn team => reset
       setUnits([]);
       setUsers([]);
     }
   }, [selectedTeam]);
 
-  // 3. Fetch danh sách Shift khi mount
+  // 3. (Tuỳ chọn) Fetch danh sách Shift riêng khi mount (nếu cần)
   useEffect(() => {
-    httpApiClient
-      .get("shifts")
-      .then(setShifts)
-      .catch((err) => console.error("Lỗi fetch shifts:", err));
+    const fetchAllShifts = async () => {
+      try {
+        const shiftsRes = await httpApiClient.get("shifts");
+        if (!shiftsRes.ok) {
+          throw new Error("Lỗi fetch shifts");
+        }
+        const shiftsJson = await shiftsRes.json();
+        setShifts(shiftsJson.data);
+      } catch (err) {
+        console.error("Lỗi fetch shifts:", err);
+      }
+    };
+    fetchAllShifts();
   }, []);
 
-  // Hàm kiểm tra nếu 1 user đã phục vụ chuyến bay (dựa trên shiftDate và userId)
+  // Hàm kiểm tra nếu 1 user đã phục vụ chuyến bay
   const checkUserAssignment = async (userId) => {
     if (!shiftDate) return false;
     const formattedDate = shiftDate.toISOString().split("T")[0];
     const url = `user-flight-shifts/isAssigned?shiftDate=${formattedDate}&userId=${userId}`;
     try {
       const res = await httpApiClient.get(url);
-      console.log(
-        `checkUserAssignment: userId=${userId}, status=${res.status}`
-      );
+      console.log(`checkUserAssignment: userId=${userId}, status=${res.status}`);
       if (!res.ok) {
         const errorText = await res.text();
         console.error(`Error response for userId=${userId}:`, errorText);
@@ -101,7 +141,7 @@ const ApplyShiftScreen = () => {
     }
   };
 
-  // 4. Tìm kiếm user & lấy thông tin ca trực (assignedShiftCode), sau đó với mỗi user, kiểm tra assignment chuyến bay
+  // 4. Tìm kiếm user & lấy thông tin ca trực
   const handleSearchUsers = async () => {
     if (!selectedTeam) {
       Alert.alert("Lỗi", "Vui lòng chọn Team!");
@@ -115,11 +155,11 @@ const ApplyShiftScreen = () => {
     try {
       const formattedDate = shiftDate.toISOString().split("T")[0];
 
-      // API lấy danh sách user theo Team/Unit
+      // API lấy danh sách user
       let userUrl = `users/filter?teamId=${selectedTeam}`;
       if (selectedUnit) userUrl += `&unitId=${selectedUnit}`;
 
-      // API lấy danh sách user-shift (để lấy ca trực)
+      // API lấy danh sách user-shift
       let shiftUrl = `user-shifts/filter?shiftDate=${formattedDate}&teamId=${selectedTeam}`;
       if (selectedUnit) shiftUrl += `&unitId=${selectedUnit}`;
 
@@ -130,36 +170,34 @@ const ApplyShiftScreen = () => {
         httpApiClient.get(userUrl),
         httpApiClient.get(shiftUrl),
       ]);
+
       if (!resUsers.ok) {
-        throw new Error(
-          (await resUsers.text()) || "Không thể lấy danh sách nhân viên"
-        );
+        throw new Error(await resUsers.text() || "Không thể lấy danh sách nhân viên");
       }
       if (!resUserShifts.ok) {
-        throw new Error(
-          (await resUserShifts.text()) || "Không thể lấy danh sách ca trực"
-        );
+        throw new Error(await resUserShifts.text() || "Không thể lấy danh sách ca trực");
       }
 
       const dataUsers = await resUsers.json();
       const dataUserShifts = await resUserShifts.json();
 
-      // Xây dựng map: userId => shiftCode
+      // map userId => shiftCode
       const shiftMap = {};
-      dataUserShifts.forEach((item) => {
+      dataUserShifts.data.forEach((item) => {
         shiftMap[item.userId] = item.shiftCode;
       });
 
-      let mergedUsers = dataUsers.map((u) => {
+      // Gộp assignedShiftCode vào user
+      let mergedUsers = dataUsers.data .map((u) => {
         const assignedShiftCode = shiftMap[u.id] || null;
         return {
           ...u,
           assignedShiftCode,
-          assignedFlight: false, // Ban đầu chưa phục vụ chuyến bay
+          assignedFlight: false,
         };
       });
 
-      // Với mỗi user, kiểm tra xem đã phục vụ chuyến bay hay chưa thông qua endpoint isAssigned
+      // Kiểm tra assignment chuyến bay
       const updatedUsers = await Promise.all(
         mergedUsers.map(async (user) => {
           const assigned = await checkUserAssignment(user.id);
@@ -178,7 +216,7 @@ const ApplyShiftScreen = () => {
     }
   };
 
-  // 5. Toggle user selection (chỉ cho phép chọn nếu chưa có ca trực và chưa phục vụ chuyến bay)
+  // 5. Toggle user selection
   const toggleUserSelection = (userId) => {
     if (selectedUserIds.includes(userId)) {
       setSelectedUserIds(selectedUserIds.filter((id) => id !== userId));
@@ -187,7 +225,7 @@ const ApplyShiftScreen = () => {
     }
   };
 
-  // 6. Ví dụ hàm áp dụng ca (giữ nguyên logic gửi payload)
+  // 6. Áp dụng ca
   const handleApplyShift = async () => {
     if (!shiftDate) {
       Alert.alert("Lỗi", "Vui lòng chọn ngày!");
@@ -208,6 +246,7 @@ const ApplyShiftScreen = () => {
       shiftCode: selectedShiftCode,
     };
     console.log("Applying shift with payload:", payload);
+
     try {
       const response = await httpApiClient.post("user-shifts/apply", {
         method: "POST",
@@ -219,19 +258,19 @@ const ApplyShiftScreen = () => {
       }
       Alert.alert("Thành công", "Áp dụng ca thành công!");
       setSelectedUserIds([]);
-      await handleSearchUsers(); // Refresh danh sách user sau khi áp dụng
+      await handleSearchUsers(); // Refresh
     } catch (error) {
       console.error("Error applying shift:", error);
       Alert.alert("Lỗi", error.message || "Không thể kết nối đến server");
     }
   };
 
-  // --- Render item ---
-  // Nếu user đã có assignedShiftCode hoặc đã phục vụ chuyến bay, disable chọn và hiển thị thông báo tương ứng.
+  // Render item danh sách user
   const renderUserItem = ({ item }) => {
     const isSelected = selectedUserIds.includes(item.id);
     let displayName = item.name;
     let disableSelection = false;
+
     if (item.assignedFlight) {
       displayName += " [Đã phục vụ chuyến bay]";
       disableSelection = true;
@@ -239,13 +278,13 @@ const ApplyShiftScreen = () => {
       displayName += ` [Ca trực: ${item.assignedShiftCode}]`;
       disableSelection = true;
     }
+
     return (
       <TouchableOpacity
         style={[
           styles.userItem,
           isSelected && styles.selectedUserItem,
-          (item.assignedFlight || item.assignedShiftCode) &&
-            styles.assignedUser,
+          (item.assignedFlight || item.assignedShiftCode) && styles.assignedUser,
         ]}
         onPress={() => {
           if (!disableSelection) toggleUserSelection(item.id);
@@ -253,17 +292,16 @@ const ApplyShiftScreen = () => {
         disabled={disableSelection}
       >
         <Text style={styles.userName}>{displayName}</Text>
-        {isSelected && (
-          <Ionicons name="checkmark-circle" size={24} color="green" />
-        )}
+        {isSelected && <Ionicons name="checkmark-circle" size={24} color="green" />}
       </TouchableOpacity>
     );
   };
 
-  // --- Render Header ---
+  // Header
   const ListHeader = () => (
     <View style={styles.headerContainer}>
       <Text style={styles.title}>Áp dụng ca làm việc</Text>
+      {/* Picker Team */}
       <Text style={styles.label}>Chọn Team:</Text>
       <View style={styles.pickerContainer}>
         <Picker
@@ -280,6 +318,8 @@ const ApplyShiftScreen = () => {
           ))}
         </Picker>
       </View>
+
+      {/* Picker Unit */}
       <Text style={styles.label}>Chọn Unit:</Text>
       <View style={styles.pickerContainer}>
         <Picker
@@ -297,6 +337,8 @@ const ApplyShiftScreen = () => {
           ))}
         </Picker>
       </View>
+
+      {/* Chọn ngày */}
       <Text style={styles.label}>Chọn ngày:</Text>
       <TouchableOpacity
         style={styles.dateButton}
@@ -315,20 +357,28 @@ const ApplyShiftScreen = () => {
         }}
         onCancel={() => setDatePickerVisible(false)}
       />
+
       <Button title="Tìm kiếm nhân viên" onPress={handleSearchUsers} />
-      {loadingUsers && (
-        <ActivityIndicator
-          size="small"
-          color="#007AFF"
-          style={{ marginTop: 10 }}
-        />
-      )}
+      {loadingUsers && <ActivityIndicator size="small" color="#007AFF" style={{ marginTop: 10 }} />}
     </View>
   );
 
-  // --- Render Footer ---
+  // Footer
   const ListFooter = () => (
     <View style={styles.footerContainer}>
+      <Picker
+        selectedValue={selectedShiftCode}
+        onValueChange={(value) => setSelectedShiftCode(value)}
+      >
+        <Picker.Item label="(Chọn ca)" value="" />
+        {shifts.map((shift) => (
+          <Picker.Item
+            key={shift.id}
+            label={shift.shiftCode}
+            value={shift.shiftCode}
+          />
+        ))}
+      </Picker>
       <Button title="Áp dụng ca" onPress={handleApplyShift} />
     </View>
   );
@@ -415,12 +465,3 @@ const styles = StyleSheet.create({
   },
 });
 
-const fetchUnitsAndShifts = async (teamId) => {
-  const units = await httpApiClient.get(`units?teamId=${teamId}`);
-  const unitsJson = await units.json();
-  setUnits(unitsJson.data);
-
-  const shifts = await httpApiClient.get("shifts");
-  const shiftsJson = await shifts.json();
-  setShifts(shiftsJson.data);
-};

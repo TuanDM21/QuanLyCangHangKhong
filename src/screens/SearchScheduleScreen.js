@@ -1,19 +1,21 @@
-import React, { useState, useEffect } from "react";
-import {
-  View,
-  Text,
-  TextInput,
-  Button,
-  Alert,
-  FlatList,
-  StyleSheet,
-  TouchableOpacity,
+// ...
+import React, { useEffect, useState } from "react";
+import { 
+  View, 
+  Text, 
+  TextInput, 
+  Button, 
+  Alert, 
+  FlatList, 
+  StyleSheet, 
+  TouchableOpacity 
 } from "react-native";
 import { Picker } from "@react-native-picker/picker";
 import Layout from "./Layout";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import httpApiClient from "../services";
+import DateTimePickerModal from "react-native-modal-datetime-picker";
 
 const SearchScheduleScreen = () => {
   // State cho ngày, team, unit
@@ -23,6 +25,9 @@ const SearchScheduleScreen = () => {
   const [units, setUnits] = useState([]);
   const [selectedUnit, setSelectedUnit] = useState("");
 
+  // State để điều khiển hiển thị DateTimePicker
+  const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
+
   // Kết quả tìm kiếm (ScheduleDTO)
   const [searchResults, setSearchResults] = useState([]);
 
@@ -30,19 +35,20 @@ const SearchScheduleScreen = () => {
 
   // 1. Fetch danh sách Team
   useEffect(() => {
+    const fetchTeams = async () => {
+      try {
+        const res = await httpApiClient.get("teams");
+        const teamsJson = await res.json();
+        console.log("Fetched teams:", teamsJson);
+        setTeams(teamsJson.data);
+      } catch (error) {
+        console.error("Error fetching teams:", error);
+        Alert.alert("Error", "Unable to fetch teams");
+      }
+    };
+
     fetchTeams();
   }, []);
-
-  const fetchTeams = async () => {
-    try {
-      const teams = await httpApiClient.get("teams");
-      const teamsJson = await teams.json();
-      setTeams(teamsJson.data);
-    } catch (error) {
-      console.error("Error fetching teams:", error);
-      Alert.alert("Error", "Unable to fetch teams");
-    }
-  };
 
   // 2. Khi chọn Team => fetch Unit
   useEffect(() => {
@@ -53,15 +59,45 @@ const SearchScheduleScreen = () => {
         .get(`units?teamId=${selectedTeam}`)
         .json()
         .then((data) => {
-          console.log("Fetched units:", data);
-          setUnits(data);
+          console.log("Fetched units JSON:", data);
+          if (data && Array.isArray(data.data)) {
+            setUnits(data.data);
+          } else {
+            console.warn("Data units is not an array, got:", data);
+            setUnits([]);
+          }
         })
-        .catch((err) => console.error("Lỗi khi fetch units:", err));
+        .catch((err) => {
+          console.error("Lỗi khi fetch units:", err);
+          Alert.alert("Lỗi", "Không thể lấy danh sách đơn vị");
+        });
     } else {
       setUnits([]);
       setSearchResults([]);
     }
   }, [selectedTeam]);
+
+  // Hiển thị modal DatePicker
+  const showDatePicker = () => {
+    setDatePickerVisibility(true);
+  };
+
+  // Ẩn modal DatePicker
+  const hideDatePicker = () => {
+    setDatePickerVisibility(false);
+  };
+
+  // Hàm xử lý khi user confirm ngày trên picker
+  const handleConfirmDate = (date) => {
+    // Format thành yyyy-MM-dd
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    const formattedDate = `${year}-${month}-${day}`;
+
+    setShiftDate(formattedDate);
+    hideDatePicker();
+  };
 
   // 3. Hàm handleSearch
   const handleSearch = async () => {
@@ -76,8 +112,8 @@ const SearchScheduleScreen = () => {
 
       console.log("Fetch URL:", url);
       const data = await httpApiClient.get(url).json();
-      console.log("Fetched schedules:", data);
-      setSearchResults(data);
+      console.log("Fetched schedules:", data.data);
+      setSearchResults(data.data);
     } catch (error) {
       console.error("Lỗi khi tìm kiếm:", error);
       Alert.alert("Lỗi", error.message || "Có lỗi khi kết nối đến server");
@@ -98,10 +134,7 @@ const SearchScheduleScreen = () => {
         onPress: async () => {
           try {
             await httpApiClient.delete(`user-shifts/${scheduleId}`);
-            // Xóa thành công => cập nhật lại danh sách
-            setSearchResults(
-              searchResults.filter((item) => item.scheduleId !== scheduleId)
-            );
+            setSearchResults(searchResults.filter((item) => item.scheduleId !== scheduleId));
           } catch (error) {
             console.error("Lỗi khi xóa:", error);
             Alert.alert("Lỗi", error.message);
@@ -149,7 +182,6 @@ const SearchScheduleScreen = () => {
         {item.description || "N/A"}
       </Text>
 
-      {/* Nút Sửa và Xóa nằm dọc góc dưới bên phải */}
       <View style={styles.actionContainer}>
         <TouchableOpacity
           style={[styles.actionButton, { backgroundColor: "#007AFF" }]}
@@ -160,10 +192,7 @@ const SearchScheduleScreen = () => {
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[
-            styles.actionButton,
-            { backgroundColor: "#FF3B30", marginTop: 8 },
-          ]}
+          style={[styles.actionButton, { backgroundColor: "#FF3B30", marginTop: 8 }]}
           onPress={() => handleDelete(item.scheduleId)}
         >
           <Ionicons name="trash-outline" size={20} color="white" />
@@ -175,6 +204,14 @@ const SearchScheduleScreen = () => {
 
   return (
     <Layout>
+      {/* DateTimePickerModal - đặt ngay trong component để dễ điều khiển */}
+      <DateTimePickerModal
+        isVisible={isDatePickerVisible}
+        mode="date" // có thể 'date', 'time', hoặc 'datetime'
+        onConfirm={handleConfirmDate}
+        onCancel={hideDatePicker}
+      />
+
       <FlatList
         data={searchResults}
         keyExtractor={(item, index) =>
@@ -185,15 +222,18 @@ const SearchScheduleScreen = () => {
           <View style={styles.headerContainer}>
             <Text style={styles.title}>Tìm kiếm lịch trực</Text>
 
-            {/* Nhập ngày */}
-            <TextInput
-              style={styles.input}
-              placeholder="Nhập ngày (YYYY-MM-DD)"
-              value={shiftDate}
-              onChangeText={setShiftDate}
-            />
+            {/* TextInput này thay vì cho gõ tay, ta cho onFocus mở picker, hoặc làm Button riêng */}
+            <TouchableOpacity onPress={showDatePicker}>
+              <TextInput
+                style={styles.input}
+                placeholder="Nhập ngày (YYYY-MM-DD)"
+                value={shiftDate}
+                onChangeText={setShiftDate}
+                // Không cho gõ tay (chỉ cho ấn chọn):
+                editable={false}
+              />
+            </TouchableOpacity>
 
-            {/* Picker Team */}
             <Text style={styles.label}>Chọn Team (ID):</Text>
             <View style={styles.pickerContainer}>
               <Picker
@@ -211,7 +251,6 @@ const SearchScheduleScreen = () => {
               </Picker>
             </View>
 
-            {/* Picker Unit */}
             <Text style={styles.label}>Chọn Unit (ID):</Text>
             <View style={styles.pickerContainer}>
               <Picker
@@ -220,13 +259,14 @@ const SearchScheduleScreen = () => {
                 enabled={!!selectedTeam}
               >
                 <Picker.Item label="(Chọn Unit)" value="" />
-                {units.map((unit) => (
-                  <Picker.Item
-                    key={unit.id}
-                    label={unit.unitName}
-                    value={unit.id.toString()}
-                  />
-                ))}
+                {Array.isArray(units) &&
+                  units.map((unit) => (
+                    <Picker.Item
+                      key={unit.id}
+                      label={unit.unitName}
+                      value={unit.id.toString()}
+                    />
+                  ))}
               </Picker>
             </View>
 
@@ -287,16 +327,18 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     margin: 10,
     position: "relative",
+    paddingRight: 80,
   },
   resultText: {
     fontSize: 14,
     marginBottom: 4,
+    flexWrap: "wrap",
   },
   actionContainer: {
     position: "absolute",
-    top: "50%", // Đặt ở giữa theo chiều dọc
-    right: 10, // Cách mép phải 10 đơn vị
-    transform: [{ translateY: -20 }], // Dịch lên để căn giữa (điều chỉnh giá trị này tùy theo kích thước nút)
+    top: "50%",
+    right: 10,
+    transform: [{ translateY: -20 }],
     flexDirection: "column",
     alignItems: "center",
   },
@@ -306,34 +348,11 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 10,
     borderRadius: 8,
-    marginBottom: 8, // Khoảng cách giữa các nút
+    marginBottom: 8,
   },
   actionButtonText: {
     color: "white",
     marginLeft: 5,
     fontWeight: "600",
-  },
-  resultText: {
-    fontSize: 14,
-    marginBottom: 4,
-    // Cho phép xuống dòng nếu quá dài
-    flexWrap: "wrap",
-  },
-
-  // Nếu cần, cập nhật thêm cho label hoặc container
-  label: {
-    fontWeight: "600",
-    marginBottom: 5,
-    flexWrap: "wrap",
-    // width: "100%", // Nếu cần
-  },
-  resultCard: {
-    backgroundColor: "white",
-    padding: 10,
-    borderRadius: 5,
-    margin: 10,
-    position: "relative",
-    // Chừa khoảng trống bên phải để tránh chữ bị che
-    paddingRight: 80, // Tùy chỉnh con số này phù hợp kích thước nút
   },
 });

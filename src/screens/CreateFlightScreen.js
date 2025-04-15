@@ -32,6 +32,7 @@ const CreateFlightScreen = () => {
       try {
         setLoadingAirports(true);
         const airports = await httpApiClient.get("airports");
+        console.log("Fetched airports:", airports);
         const airportsJson = await airports.json();
         setAirports(airportsJson.data);
       } catch (error) {
@@ -43,13 +44,12 @@ const CreateFlightScreen = () => {
     };
     fetchAirports();
   }, []);
-
   const handleCreateFlight = async () => {
     if (selectedDeparture === selectedArrival) {
       Alert.alert("Lỗi", "Sân bay khởi hành và hạ cánh không được trùng nhau.");
       return;
     }
-
+  
     if (
       !flightNumber ||
       !selectedDeparture ||
@@ -61,18 +61,24 @@ const CreateFlightScreen = () => {
       Alert.alert("Lỗi", "Vui lòng nhập đầy đủ thông tin.");
       return;
     }
-
+  
     const newFlight = {
       flightNumber,
-      departureAirport: selectedDeparture,
+      // departureAirportCode hoặc departureAirport đều OK
+      departureAirport: selectedDeparture, 
       arrivalAirport: selectedArrival,
       departureTime,
       arrivalTime,
       flightDate,
     };
-
+    console.log("Payload newFlight:", JSON.stringify(newFlight));
+    
+  
+    // Log dữ liệu trước khi gửi request
+    console.log("Payload newFlight:", JSON.stringify(newFlight));
+  
     try {
-      const response = await httpApiClient.post("flights", { json: newFlight });
+      const response = await httpApiClient.put("flights", { json: newFlight });
       Alert.alert("Thành công", "Tạo chuyến bay thành công", [
         { text: "OK", onPress: () => navigation.goBack() },
       ]);
@@ -87,6 +93,7 @@ const CreateFlightScreen = () => {
       Alert.alert("Lỗi", "Không thể kết nối đến server.");
     }
   };
+  
 
   return (
     <Layout>
@@ -134,7 +141,7 @@ const CreateFlightScreen = () => {
                 <Picker.Item
                   key={airport.id}
                   label={`${airport.airportCode} - ${airport.airportName}`}
-                  value={airport.airportCode}
+                  value={airport}
                 />
               ))}
             </Picker>
