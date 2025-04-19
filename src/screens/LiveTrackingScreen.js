@@ -1,5 +1,11 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, ActivityIndicator, Alert } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  ActivityIndicator,
+  Alert,
+} from "react-native";
 import MapView, { Marker, Polyline } from "react-native-maps";
 import { Ionicons } from "@expo/vector-icons";
 import { useRoute } from "@react-navigation/native";
@@ -10,13 +16,11 @@ const LiveTrackingScreen = () => {
   const route = useRoute();
   const { flight } = route.params || {};
 
-  // Kiểm tra thông tin chuyến bay
+  // 1) Kiểm tra dữ liệu chuyến bay
   if (!flight) {
     return (
       <View style={styles.loadingContainer}>
-        <Text style={styles.errorText}>
-          Không tìm thấy thông tin chuyến bay.
-        </Text>
+        <Text style={styles.errorText}>Không tìm thấy thông tin chuyến bay.</Text>
       </View>
     );
   }
@@ -30,23 +34,33 @@ const LiveTrackingScreen = () => {
     );
   }
 
-  // State cho danh sách sân bay và tọa độ
+  // 2) Tách code sân bay (object hoặc string)
+  const depCode =
+    typeof flight.departureAirport === "object"
+      ? flight.departureAirport.airportCode
+      : flight.departureAirport;
+  const arrCode =
+    typeof flight.arrivalAirport === "object"
+      ? flight.arrivalAirport.airportCode
+      : flight.arrivalAirport;
+
+  // 3) State lưu airports, tọa độ và vị trí marker
   const [airports, setAirports] = useState([]);
   const [loadingAirports, setLoadingAirports] = useState(false);
   const [origin, setOrigin] = useState(null);
   const [destination, setDestination] = useState(null);
   const [markerPosition, setMarkerPosition] = useState(null);
 
-  // Lấy danh sách sân bay từ API
+  // 4) Fetch danh sách airports
   useEffect(() => {
     const fetchAirports = async () => {
       setLoadingAirports(true);
       try {
-        const airports = await httpApiClient.get("airports");
-        const airportsJson = await airports.json();
-        setAirports(airportsJson.data);
-      } catch (error) {
-        Alert.alert("Lỗi", error.message);
+        const res = await httpApiClient.get("airports");
+        const json = await res.json();
+        setAirports(json.data);
+      } catch (err) {
+        Alert.alert("Lỗi", err.message);
       } finally {
         setLoadingAirports(false);
       }
@@ -54,102 +68,105 @@ const LiveTrackingScreen = () => {
     fetchAirports();
   }, []);
 
-  // Lọc tọa độ dựa trên mã sân bay trong flight
+  // 5) Khi đã có airports, tìm tọa độ origin & destination
   useEffect(() => {
-    if (airports.length === 0) return;
-    const depAirport = airports.find(
-      (a) => a.airportCode === flight.departureAirport
-    );
-    const arrAirport = airports.find(
-      (a) => a.airportCode === flight.arrivalAirport
-    );
-    if (!depAirport || !arrAirport) {
-      Alert.alert("Lỗi", "Không tìm thấy tọa độ của sân bay được chọn.");
+    if (!airports.length) return;
+    const dep = airports.find((a) => a.airportCode === depCode);
+    const arr = airports.find((a) => a.airportCode === arrCode);
+    if (!dep || !arr) {
+      Alert.alert("Lỗi", "Không tìm thấy tọa độ sân bay.");
       return;
     }
-    const depCoords = {
-      latitude: depAirport.latitude,
-      longitude: depAirport.longitude,
-    };
-    const arrCoords = {
-      latitude: arrAirport.latitude,
-      longitude: arrAirport.longitude,
-    };
-    setOrigin(depCoords);
-    setDestination(arrCoords);
-    setMarkerPosition(depCoords);
-  }, [airports, flight]);
+    const o = { latitude: dep.latitude, longitude: dep.longitude };
+    const d = { latitude: arr.latitude, longitude: arr.longitude };
+    setOrigin(o);
+    setDestination(d);
+    setMarkerPosition(o);
+  }, [airports, depCode, arrCode]);
 
-  // Hàm chuyển đổi thời gian (chuỗi "HH:mm" hoặc "HH:mm:ss") thành số giây kể từ nửa đêm
-  const parseTimeToSeconds = (timeStr) => {
-    if (!timeStr) return 0;
-    const parts = timeStr.split(":");
-    const hours = parseInt(parts[0], 10);
-    const minutes = parseInt(parts[1], 10);
-    const seconds = parts[2] ? parseInt(parts[2], 10) : 0;
-    return hours * 3600 + minutes * 60 + seconds;
+  // 6) Chuyển "HH:mm:ss" sang giây kể từ 00:00
+  const parseTimeToSeconds = (t) => {
+    if (!t) return 0;
+    const [h, m, s = "0"] = t.split(":");
+    return +h * 3600 + +m * 60 + +s;
   };
+  const depSec = parseTimeToSeconds(flight.actualDepartureTime);
+  let arrSec = parseTimeToSeconds(flight.actualArrivalTime);
+  if (arrSec <= depSec) arrSec += 24 * 3600;
+  const totalDuration = arrSec - depSec;
 
-  let depSeconds = parseTimeToSeconds(flight.actualDepartureTime);
-  let arrSeconds = parseTimeToSeconds(flight.actualArrivalTime);
-
-  // Xử lý trường hợp chuyến bay qua đêm: nếu arrSeconds <= depSeconds, cộng thêm 24 giờ (86400 giây)
-  if (arrSeconds <= depSeconds) {
-    arrSeconds += 24 * 3600;
-  }
-
-  // Hàm tính toán bearing (hướng) từ điểm start đến end
-  const calculateBearing = (start, end) => {
-    const lat1 = (start.latitude * Math.PI) / 180;
-    const lon1 = (start.longitude * Math.PI) / 180;
-    const lat2 = (end.latitude * Math.PI) / 180;
-    const lon2 = (end.longitude * Math.PI) / 180;
-    const dLon = lon2 - lon1;
-    const y = Math.sin(dLon) * Math.cos(lat2);
+  // 7) Tính bearing để xoay icon
+  const calcBearing = (S, E) => {
+    const toRad = (d) => (d * Math.PI) / 180;
+    const y =
+      Math.sin(toRad(E.longitude - S.longitude)) * Math.cos(toRad(E.latitude));
     const x =
-      Math.cos(lat1) * Math.sin(lat2) -
-      Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
-    let brng = Math.atan2(y, x) * (180 / Math.PI);
-    brng = (brng + 360) % 360;
-    return brng;
+      Math.cos(toRad(S.latitude)) * Math.sin(toRad(E.latitude)) -
+      Math.sin(toRad(S.latitude)) *
+        Math.cos(toRad(E.latitude)) *
+        Math.cos(toRad(E.longitude - S.longitude));
+    let b = (Math.atan2(y, x) * 180) / Math.PI;
+    return (b + 360) % 360;
+  };
+  const bearing = origin && destination ? calcBearing(origin, destination) : 0;
+
+  // ————————————————————————————
+  // 8) Sinh routeCoords theo quadratic Bézier với offset động
+  const makeBezier = (P0, P1, segments = 80, offsetLon = 1.5) => {
+    const midLat = (P0.latitude + P1.latitude) / 2;
+    const midLon = (P0.longitude + P1.longitude) / 2 + offsetLon;
+    const C = { latitude: midLat, longitude: midLon };
+
+    const pts = [];
+    for (let i = 0; i <= segments; i++) {
+      const t = i / segments;
+      const inv = 1 - t;
+      const lat =
+        inv * inv * P0.latitude +
+        2 * inv * t * C.latitude +
+        t * t * P1.latitude;
+      const lon =
+        inv * inv * P0.longitude +
+        2 * inv * t * C.longitude +
+        t * t * P1.longitude;
+      pts.push({ latitude: lat, longitude: lon });
+    }
+    return pts;
   };
 
-  // Tính bearing của chuyến bay dựa trên origin và destination
-  const bearing =
-    origin && destination ? calculateBearing(origin, destination) : 0;
+  // Xác định offsetLon nhỏ hơn nếu bay giữa hai sân bay miền Bắc
+  const northernCodes = ["HAN", "VII", "DIN", "HPH", "THQ"];
+  const isNorthern =
+    northernCodes.includes(depCode) && northernCodes.includes(arrCode);
+  const offsetLon = isNorthern ? 0.5 : 0.8;
 
-  // Cập nhật vị trí marker theo thời gian thực (cập nhật mỗi 1 giây)
+  const [routeCoords, setRouteCoords] = useState([]);
+  useEffect(() => {
+    if (origin && destination) {
+      setRouteCoords(makeBezier(origin, destination, 100, offsetLon));
+    }
+  }, [origin, destination, offsetLon]);
+
+  // ————————————————————————————
+  // 9) Interval mỗi giây update vị trí marker
   useEffect(() => {
     if (!origin || !destination) return;
-    const intervalId = setInterval(() => {
+    const iv = setInterval(() => {
       const now = new Date();
-      let currentSeconds =
-        now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
-      // Nếu chuyến bay qua đêm và giờ hiện tại thuộc sáng (số giây thấp), cộng thêm 24 giờ
-      if (currentSeconds < depSeconds) {
-        currentSeconds += 24 * 3600;
-      }
-      let progress = 0;
-      if (currentSeconds < depSeconds) {
-        progress = 0;
-      } else if (currentSeconds > arrSeconds) {
-        progress = 1;
-      } else {
-        progress = (currentSeconds - depSeconds) / (arrSeconds - depSeconds);
-      }
-      const currentLatitude =
-        origin.latitude + (destination.latitude - origin.latitude) * progress;
-      const currentLongitude =
-        origin.longitude +
-        (destination.longitude - origin.longitude) * progress;
+      let t = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+      if (t < depSec) return setMarkerPosition(origin);
+      if (t > arrSec) return setMarkerPosition(destination);
+      const p = (t - depSec) / totalDuration;
       setMarkerPosition({
-        latitude: currentLatitude,
-        longitude: currentLongitude,
+        latitude: origin.latitude + (destination.latitude - origin.latitude) * p,
+        longitude:
+          origin.longitude + (destination.longitude - origin.longitude) * p,
       });
     }, 1000);
-    return () => clearInterval(intervalId);
-  }, [depSeconds, arrSeconds, origin, destination]);
+    return () => clearInterval(iv);
+  }, [origin, destination, depSec, arrSec, totalDuration]);
 
+  // 10) Nếu chưa sẵn sàng thì show loader
   if (loadingAirports || !origin || !destination || !markerPosition) {
     return (
       <View style={styles.loadingContainer}>
@@ -158,31 +175,28 @@ const LiveTrackingScreen = () => {
     );
   }
 
-  // Tính toán region sao cho bao gồm cả 2 điểm
+  // 11) Tính region cho bản đồ
   const region = {
     latitude: (origin.latitude + destination.latitude) / 2,
     longitude: (origin.longitude + destination.longitude) / 2,
-    latitudeDelta: Math.max(
-      Math.abs(origin.latitude - destination.latitude) * 2,
-      8
-    ),
-    longitudeDelta: Math.max(
-      Math.abs(origin.longitude - destination.longitude) * 2,
-      8
-    ),
+    latitudeDelta:
+      Math.abs(origin.latitude - destination.latitude) * 2 || 8,
+    longitudeDelta:
+      Math.abs(origin.longitude - destination.longitude) * 2 || 8,
   };
 
+  // 12) Render map
   return (
     <Layout>
       <View style={styles.container}>
         <MapView style={styles.map} initialRegion={region}>
-          {/* Vẽ đường bay nối origin và destination */}
+          {/* Bézier curve */}
           <Polyline
-            coordinates={[origin, destination]}
+            coordinates={routeCoords}
             strokeColor="#007AFF"
             strokeWidth={3}
           />
-          {/* Marker cho máy bay với rotation dựa trên bearing */}
+          {/* Máy bay */}
           <Marker
             coordinate={markerPosition}
             rotation={bearing}
@@ -190,27 +204,26 @@ const LiveTrackingScreen = () => {
           >
             <Ionicons name="airplane" size={30} color="red" />
           </Marker>
-          {/* Marker cho sân bay khởi hành */}
+          {/* Sân bay */}
           <Marker coordinate={origin}>
             <Ionicons name="location" size={24} color="green" />
-            <Text style={styles.markerLabel}>{flight.departureAirport}</Text>
+            <Text style={styles.markerLabel}>{depCode}</Text>
           </Marker>
-          {/* Marker cho sân bay đến */}
           <Marker coordinate={destination}>
             <Ionicons name="location" size={24} color="blue" />
-            <Text style={styles.markerLabel}>{flight.arrivalAirport}</Text>
+            <Text style={styles.markerLabel}>{arrCode}</Text>
           </Marker>
         </MapView>
+
         <View style={styles.infoContainer}>
           <Text style={styles.infoText}>
             Live Tracking chuyến bay: {flight.flightNumber}
           </Text>
           <Text style={styles.infoText}>
-            Từ {flight.departureAirport} đến {flight.arrivalAirport}
+            Từ {depCode} → {arrCode}
           </Text>
           <Text style={styles.infoText}>
-            Thời gian thực: {flight.actualDepartureTime} -{" "}
-            {flight.actualArrivalTime}
+            {flight.actualDepartureTime} → {flight.actualArrivalTime}
           </Text>
         </View>
       </View>
@@ -221,12 +234,8 @@ const LiveTrackingScreen = () => {
 export default LiveTrackingScreen;
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  map: {
-    flex: 1,
-  },
+  container: { flex: 1 },
+  map: { flex: 1 },
   markerLabel: {
     backgroundColor: "rgba(255,255,255,0.8)",
     padding: 2,
@@ -254,5 +263,9 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+  },
+  errorText: {
+    fontSize: 16,
+    color: "red",
   },
 });

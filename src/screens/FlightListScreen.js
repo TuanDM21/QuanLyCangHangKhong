@@ -23,7 +23,7 @@ const FlightListScreen = () => {
   // Modal controls
   const [modalVisible, setModalVisible] = useState(false);
   const [currentFlightId, setCurrentFlightId] = useState(null);
-  const [timeType, setTimeType] = useState(""); // "actualDepartureTime", "actualArrivalTime", "actualDepartureTimeAtArrival"
+  const [timeType, setTimeType] = useState(""); 
   const [newTime, setNewTime] = useState("");
 
   useEffect(() => {
@@ -45,7 +45,6 @@ const FlightListScreen = () => {
   };
 
   // Mở modal để nhập giờ cho trường tương ứng
-  // timeType là tên trường mà bạn cần cập nhật
   const handleOpenModal = (flightId, fieldName) => {
     setCurrentFlightId(flightId);
     setTimeType(fieldName);
@@ -54,36 +53,48 @@ const FlightListScreen = () => {
   };
 
   // Cập nhật giờ thực tế lên server
-  const updateTime = async () => {
-    if (!newTime) {
-      Alert.alert("Lỗi", "Vui lòng nhập giờ (HH:mm)");
-      return;
-    }
-    const flightToUpdate = flights.find((f) => f.id === currentFlightId);
-    if (!flightToUpdate) {
-      Alert.alert("Lỗi", "Không tìm thấy chuyến bay cần cập nhật");
-      setModalVisible(false);
-      return;
-    }
-    const updatedFlight = { ...flightToUpdate };
-    updatedFlight[timeType] = newTime;
+// … trong FlightListScreen.js …
 
-    try {
-      const response = await httpApiClient.get(`flights?date=${selectedDate}`);
-      if (!response.ok) {
-        throw new Error("Cập nhật giờ thất bại");
+// … trong FlightListScreen.js …
+
+// … trong FlightListScreen.js …
+
+const updateTime = async () => {
+  if (!/^\d\d:\d\d$/.test(newTime)) {
+    return Alert.alert("Lỗi", "Hãy nhập giờ theo định dạng HH:mm");
+  }
+
+  const payload = { [timeType]: newTime + ":00" };
+  console.log('[updateTime] PATCH /api/flights/' + currentFlightId + '/times', payload);
+
+  try {
+    const res = await httpApiClient.patch(
+      `flights/${currentFlightId}/times`,
+      {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
       }
-      const data = await response.json();
-      setFlights((prev) =>
-        prev.map((f) => (f.id === currentFlightId ? data : f))
-      );
-      Alert.alert("Thành công", "Đã cập nhật giờ!");
-    } catch (error) {
-      Alert.alert("Lỗi", error.message);
-    } finally {
-      setModalVisible(false);
+    );
+    console.log('[updateTime] status', res.status);
+    const json = await res.json();
+    console.log('[updateTime] body', json);
+
+    if (!res.ok || !json.success) {
+      throw new Error(json.message || `HTTP ${res.status}`);
     }
-  };
+
+    Alert.alert("Thành công", json.message || "Đã cập nhật giờ");
+    setModalVisible(false);
+    fetchFlights();
+  } catch (e) {
+    console.error('[updateTime] ERR', e);
+    Alert.alert("Lỗi", e.message);
+  }
+};
+
+
+
 
   // Hàm cắt chuỗi thời gian "HH:mm:ss" thành "HH:mm"
   const formatTime = (timeStr) => {
@@ -91,7 +102,7 @@ const FlightListScreen = () => {
     return timeStr.length >= 5 ? timeStr.substring(0, 5) : timeStr;
   };
 
-  // Live Tracking: nếu actualDepartureTime đã có và khác "00:00" (sau khi được format)
+  // Live Tracking (nếu actualDepartureTime khác null)
   const renderLiveTracking = (flight) => {
     if (
       flight.actualDepartureTime &&
@@ -111,7 +122,7 @@ const FlightListScreen = () => {
     return null;
   };
 
-  // Render từng item chuyến bay – luôn hiển thị nút "Sửa" cho mỗi trường
+  // Render từng item chuyến bay
   const renderFlightItem = ({ item }) => {
     return (
       <View style={styles.card}>
@@ -120,11 +131,17 @@ const FlightListScreen = () => {
           <Ionicons name="airplane-outline" size={24} color="#007AFF" />
           <Text style={styles.flightNumber}>{item.flightNumber}</Text>
         </View>
+
         <Text style={styles.infoText}>Ngày bay: {item.flightDate || ""}</Text>
+
+        {/* Hiển thị mã sân bay (không render object) */}
         <Text style={styles.infoText}>
-          {item.departureAirport} → {item.arrivalAirport}
+          {item.departureAirport?.airportCode ?? "Chưa xác định"}
+          {" → "}
+          {item.arrivalAirport?.airportCode ?? "Chưa xác định"}
         </Text>
-        {/* Thời gian kế hoạch (dự kiến) */}
+
+        {/* Thời gian kế hoạch */}
         <View style={styles.planRow}>
           <Text style={styles.planLabel}>Kế hoạch:</Text>
           <Text style={styles.planTime}>
@@ -135,7 +152,9 @@ const FlightListScreen = () => {
         {/* Cất cánh thực tế tại sân bay đi */}
         <View style={styles.timeRow}>
           <Text style={styles.label}>
-            Cất cánh thực tế tại {item.departureAirport}:
+            Cất cánh thực tế tại{" "}
+            {/* Chỉ in mã sân bay */}
+            {item.departureAirport?.airportCode ?? "Chưa xác định"}:
           </Text>
           <Text style={styles.timeValue}>
             {formatTime(item.actualDepartureTime)}
@@ -151,7 +170,8 @@ const FlightListScreen = () => {
         {/* Hạ cánh thực tế tại sân bay đến */}
         <View style={styles.timeRow}>
           <Text style={styles.label}>
-            Hạ cánh thực tế tại {item.arrivalAirport}:
+            Hạ cánh thực tế tại{" "}
+            {item.arrivalAirport?.airportCode ?? "Chưa xác định"}:
           </Text>
           <Text style={styles.timeValue}>
             {formatTime(item.actualArrivalTime)}
@@ -164,10 +184,11 @@ const FlightListScreen = () => {
           </TouchableOpacity>
         </View>
 
-        {/* Cất cánh thực tế tại sân bay đến */}
+        {/* Cất cánh thực tế tại sân bay đến (nếu turnaround) */}
         <View style={styles.timeRow}>
           <Text style={styles.label}>
-            Cất cánh thực tế tại {item.arrivalAirport}:
+            Cất cánh thực tế tại{" "}
+            {item.arrivalAirport?.airportCode ?? "Chưa xác định"}:
           </Text>
           <Text style={styles.timeValue}>
             {formatTime(item.actualDepartureTimeAtArrival)}
@@ -182,7 +203,6 @@ const FlightListScreen = () => {
           </TouchableOpacity>
         </View>
 
-        {/* Live Tracking */}
         {renderLiveTracking(item)}
       </View>
     );
@@ -324,11 +344,6 @@ const styles = StyleSheet.create({
   btnText: {
     color: "#fff",
     fontWeight: "bold",
-  },
-  infoTextSmall: {
-    fontSize: 13,
-    color: "#888",
-    marginLeft: 5,
   },
   liveBtn: {
     backgroundColor: "#007AFF",

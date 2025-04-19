@@ -56,9 +56,10 @@ const ApplyFlightShiftScreen = () => {
     try {
       const response = await httpApiClient.get(`units?teamId=${teamId}`);
       const unitsJson = await response.json();
-      setUnits(unitsJson.data);
+      return unitsJson.data;
     } catch (error) {
       console.error("Error fetching units:", error);
+      return [];
     }
   };
 
@@ -68,21 +69,26 @@ const ApplyFlightShiftScreen = () => {
         `flights/searchByDate?date=${date}`
       );
       const flightsJson = await response.json();
-      setFlights(flightsJson.data);
+      return flightsJson.data;
     } catch (error) {
       console.error("Error fetching flights:", error);
+      return [];
     }
   };
 
   const fetchUserAndShiftData = async (userUrl, shiftUrl) => {
-    const [users, shifts] = await Promise.all([
+    const [userResponse, shiftResponse] = await Promise.all([
       httpApiClient.get(userUrl),
       httpApiClient.get(shiftUrl),
     ]);
-    return { users, shifts };
+    const userJson = await userResponse.json();
+    const shiftJson = await shiftResponse.json();
+    return { 
+      users: userJson.data,
+      shifts: shiftJson.data 
+    };
   };
 
-  // 1. Fetch danh sách Team khi mount
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -91,11 +97,9 @@ const ApplyFlightShiftScreen = () => {
         console.error("Error fetching teams:", error);
       }
     };
-
     fetchData();
   }, []);
 
-  // 2. Khi chọn Team, fetch danh sách Unit
   useEffect(() => {
     if (selectedTeam) {
       setSelectedUnit("");
@@ -112,7 +116,6 @@ const ApplyFlightShiftScreen = () => {
     }
   }, [selectedTeam]);
 
-  // 3. Khi chọn ngày, fetch danh sách chuyến bay của ngày đó
   useEffect(() => {
     if (shiftDate) {
       setLoadingFlights(true);
@@ -131,8 +134,6 @@ const ApplyFlightShiftScreen = () => {
     }
   }, [shiftDate]);
 
-  // 4. Tìm kiếm nhân viên: fetch danh sách user và ca trực (assignedShiftCode)
-  // Sau đó, nếu đã chọn chuyến bay, merge thông tin ca chuyến bay (assignedFlight) vào danh sách.
   const handleSearchUsers = async () => {
     if (!selectedTeam) {
       Alert.alert("Lỗi", "Vui lòng chọn Team!");
@@ -145,25 +146,16 @@ const ApplyFlightShiftScreen = () => {
     setLoadingUsers(true);
     try {
       const formattedDate = shiftDate.toISOString().split("T")[0];
-
-      // API lấy danh sách nhân viên theo Team/Unit
       let userUrl = `users/filter?teamId=${selectedTeam}`;
       if (selectedUnit) userUrl += `&unitId=${selectedUnit}`;
-
-      // API lấy ca trực (assignedShiftCode)
+      // Giả sử backend dùng 'shiftDate' cho user-shifts filter
       let shiftUrl = `user-shifts/filter?shiftDate=${formattedDate}&teamId=${selectedTeam}`;
       if (selectedUnit) shiftUrl += `&unitId=${selectedUnit}`;
-
       console.log("LOG: Fetch userUrl:", userUrl);
       console.log("LOG: Fetch shiftUrl:", shiftUrl);
-
-      const { users: dataUsers, shifts: dataUserShifts } =
-        await fetchUserAndShiftData(userUrl, shiftUrl);
-
+      const { users: dataUsers, shifts: dataUserShifts } = await fetchUserAndShiftData(userUrl, shiftUrl);
       console.log("LOG: Fetched users:", dataUsers);
       console.log("LOG: Fetched user shifts:", dataUserShifts);
-
-      // Merge assignedShiftCode
       const shiftMap = {};
       dataUserShifts.forEach((item) => {
         shiftMap[item.userId] = item.shiftCode;
@@ -171,36 +163,37 @@ const ApplyFlightShiftScreen = () => {
       let mergedUsers = dataUsers.map((u) => ({
         ...u,
         assignedShiftCode: shiftMap[u.id] || null,
-        assignedFlight: null, // ban đầu chưa có record ca chuyến bay
+        assignedFlight: null,
       }));
-
-      // Nếu đã chọn chuyến bay, merge luôn thông tin ca chuyến bay (assignedFlight)
       if (selectedFlightId) {
-        const flightShiftUrl = `user-flight-shifts?flightId=${selectedFlightId}&shiftDate=${formattedDate}`;
+        // Backend GET /shifts yêu cầu tham số "date"
+        const flightShiftUrl = `user-flight-shifts/shifts?flightId=${selectedFlightId}&date=${formattedDate}`;
         console.log("LOG: Fetch flightShiftUrl:", flightShiftUrl);
         const resFlightShifts = await httpApiClient.get(flightShiftUrl);
         if (!resFlightShifts.ok) {
           const errorJson = await resFlightShifts.json();
-          throw new Error(
-            errorJson.message || "Không thể lấy thông tin ca chuyến bay"
-          );
+          throw new Error(errorJson.message || "Không thể lấy thông tin ca chuyến bay");
         }
-        const flightShiftData = await resFlightShifts.json();
-        // Tạo map: userId -> flight assignment record (bao gồm flightNumber,...)
-        const flightAssignMap = {};
-        flightShiftData.forEach((fs) => {
-          flightAssignMap[fs.userId] = fs; // fs chứa trường flightNumber, id của record,...
-        });
-        mergedUsers = mergedUsers.map((u) => ({
-          ...u,
-          assignedFlight: flightAssignMap[u.id] || null,
-        }));
+        const rawJson = await resFlightShifts.json();
+        console.log("LOG: Raw flight shift JSON:", rawJson);
+        const flightShiftData = rawJson.data;
+        if (!Array.isArray(flightShiftData)) {
+          console.error("flightShiftData is not an array:", flightShiftData);
+          mergedUsers = mergedUsers.map((u) => ({ ...u, assignedFlight: null }));
+        } else {
+          const flightAssignMap = {};
+          flightShiftData.forEach((fs) => {
+            flightAssignMap[fs.userId] = fs;
+          });
+          mergedUsers = mergedUsers.map((u) => ({
+            ...u,
+            assignedFlight: flightAssignMap[u.id] || null,
+          }));
+        }
       }
-
       console.log("LOG: Merged Users:", mergedUsers);
       setUsers(mergedUsers);
       setSelectedUserIds([]);
-      // Giữ nguyên selectedFlightId để highlight thông tin, cho phép update bằng cách chọn chuyến bay mới
     } catch (error) {
       console.error("Lỗi khi fetch data:", error);
       Alert.alert("Lỗi", error.message || "Có lỗi khi kết nối đến server");
@@ -209,19 +202,25 @@ const ApplyFlightShiftScreen = () => {
     }
   };
 
-  // 5. useEffect: khi selectedFlightId thay đổi, tự động refresh thông tin ca chuyến bay
   useEffect(() => {
     const fetchFlightShiftData = async () => {
       if (shiftDate && selectedFlightId && users.length > 0) {
         const formattedDate = shiftDate.toISOString().split("T")[0];
         try {
           const res = await httpApiClient.get(
-            `user-flight-shifts?flightId=${selectedFlightId}&shiftDate=${formattedDate}`
+            `user-flight-shifts/shifts?flightId=${selectedFlightId}&date=${formattedDate}`
           );
-          if (!res.ok) throw new Error("Không thể lấy thông tin ca chuyến bay");
-          const flightShiftData = await res.json();
+          console.log("Response status:", res.status, res.statusText);
+          const rawJson = await res.json();
+          console.log("Raw JSON:", rawJson);
+          const flightShiftArray = rawJson.data;
+          console.log("Flight shift array:", flightShiftArray);
+          if (!Array.isArray(flightShiftArray)) {
+            console.error("flightShiftArray is not an array:", flightShiftArray);
+            return;
+          }
           const flightAssignMap = {};
-          flightShiftData.forEach((fs) => {
+          flightShiftArray.forEach((fs) => {
             flightAssignMap[fs.userId] = fs;
           });
           const updatedUsers = users.map((u) => ({
@@ -234,11 +233,9 @@ const ApplyFlightShiftScreen = () => {
         }
       }
     };
-
     fetchFlightShiftData();
   }, [selectedFlightId]);
 
-  // 6. Hàm để xoá ca chuyến bay của 1 nhân viên (gọi API DELETE)
   const handleRemoveAssignment = async (userId) => {
     if (!shiftDate || !selectedFlightId) return;
     const formattedDate = shiftDate.toISOString().split("T")[0];
@@ -247,7 +244,6 @@ const ApplyFlightShiftScreen = () => {
         `user-flight-shifts?flightId=${selectedFlightId}&shiftDate=${formattedDate}&userId=${userId}`
       );
       Alert.alert("Thành công", "Xoá ca chuyến bay thành công");
-      // Sau khi xoá, refresh lại danh sách bằng cách gọi handleSearchUsers
       await handleSearchUsers();
     } catch (error) {
       console.error("Error removing assignment:", error);
@@ -255,7 +251,6 @@ const ApplyFlightShiftScreen = () => {
     }
   };
 
-  // 7. Toggle chọn user (chỉ cho phép chọn những user chưa có ca chuyến bay)
   const toggleUserSelection = (userId) => {
     if (selectedUserIds.includes(userId)) {
       setSelectedUserIds(selectedUserIds.filter((id) => id !== userId));
@@ -264,7 +259,7 @@ const ApplyFlightShiftScreen = () => {
     }
   };
 
-  // 8. Áp dụng ca chuyến bay: gửi payload gồm shiftDate, flightId và danh sách userIds
+  // *** Sửa payload: đổi key "date" hoặc "shiftDate" thành "flightDate" ***
   const handleApplyShift = async () => {
     if (!shiftDate) {
       Alert.alert("Lỗi", "Vui lòng chọn ngày!");
@@ -275,13 +270,9 @@ const ApplyFlightShiftScreen = () => {
       return;
     }
     if (selectedUserIds.length === 0) {
-      Alert.alert(
-        "Lỗi",
-        "Vui lòng chọn ít nhất một nhân viên chưa được áp dụng ca chuyến bay!"
-      );
+      Alert.alert("Lỗi", "Vui lòng chọn ít nhất một nhân viên chưa được áp dụng ca chuyến bay!");
       return;
     }
-
     const formattedDate = shiftDate.toISOString().split("T")[0];
     const payload = {
       shiftDate: formattedDate,
@@ -289,7 +280,6 @@ const ApplyFlightShiftScreen = () => {
       userIds: selectedUserIds,
     };
     console.log("LOG: Applying shift with payload:", payload);
-
     try {
       const response = await httpApiClient.post("user-flight-shifts/apply", {
         method: "POST",
@@ -303,54 +293,42 @@ const ApplyFlightShiftScreen = () => {
         );
       }
       Alert.alert("Thành công", "Áp dụng ca thành công cho chuyến bay!");
-      await handleSearchUsers(); // Refresh danh sách nhân viên với thông tin mới
+      await handleSearchUsers();
     } catch (error) {
       console.error("Error applying shift:", error);
       Alert.alert("Lỗi", error.message || "Không thể kết nối đến server");
     }
   };
 
-  // --- Render danh sách nhân viên ---
   const renderUserItem = ({ item }) => {
     const isSelected = selectedUserIds.includes(item.id);
-
-    // Ghép tên hiển thị
     let displayName = item.name;
     if (item.assignedFlight) {
-      // Đã phục vụ chuyến bay
       displayName += ` [Đã phục vụ chuyến bay ${item.assignedFlight.flightNumber}]`;
     } else if (item.assignedShiftCode) {
-      // Đã có ca trực
       displayName += ` [Ca trực: ${item.assignedShiftCode}]`;
     }
-
-    // Nếu nhân viên đã có ca trực (assignedShiftCode) hoặc đã phục vụ chuyến bay (assignedFlight), ta vô hiệu hoá
     const isDisabled = !!item.assignedShiftCode || !!item.assignedFlight;
-
     return (
       <View style={styles.userItem}>
         <TouchableOpacity
           style={[
             { flex: 1 },
             isSelected && styles.selectedUserItem,
-            (item.assignedFlight || item.assignedShiftCode) &&
-              styles.assignedUserItem,
+            (item.assignedFlight || item.assignedShiftCode) && styles.assignedUserItem,
           ]}
           onPress={() => {
-            // Chỉ cho phép chọn nếu cả assignedShiftCode và assignedFlight đều null
             if (!item.assignedShiftCode && !item.assignedFlight) {
               toggleUserSelection(item.id);
             }
           }}
-          disabled={isDisabled} // Vô hiệu hoá nếu has shiftCode hoặc has flight
+          disabled={isDisabled}
         >
           <Text style={styles.userName}>{displayName}</Text>
           {isSelected && (
             <Ionicons name="checkmark-circle" size={24} color="green" />
           )}
         </TouchableOpacity>
-
-        {/* Nếu nhân viên đã phục vụ chuyến bay => hiển thị nút X để xóa ca */}
         {item.assignedFlight && (
           <TouchableOpacity onPress={() => handleRemoveAssignment(item.id)}>
             <Ionicons name="close-circle" size={24} color="red" />
@@ -360,11 +338,9 @@ const ApplyFlightShiftScreen = () => {
     );
   };
 
-  // --- Render Header: chọn Team, Unit, ngày, chuyến bay & nút tìm kiếm nhân viên ---
   const ListHeader = () => (
     <View style={styles.headerContainer}>
       <Text style={styles.title}>Áp dụng ca theo chuyến bay</Text>
-
       <Text style={styles.label}>Chọn Team:</Text>
       <View style={styles.pickerContainer}>
         <Picker
@@ -381,7 +357,6 @@ const ApplyFlightShiftScreen = () => {
           ))}
         </Picker>
       </View>
-
       <Text style={styles.label}>Chọn Unit:</Text>
       <View style={styles.pickerContainer}>
         <Picker
@@ -399,12 +374,8 @@ const ApplyFlightShiftScreen = () => {
           ))}
         </Picker>
       </View>
-
       <Text style={styles.label}>Chọn ngày:</Text>
-      <TouchableOpacity
-        onPress={() => setDatePickerVisible(true)}
-        style={styles.dateButton}
-      >
+      <TouchableOpacity onPress={() => setDatePickerVisible(true)} style={styles.dateButton}>
         <Text style={styles.dateText}>
           {shiftDate ? shiftDate.toISOString().split("T")[0] : "Chọn ngày"}
         </Text>
@@ -418,18 +389,11 @@ const ApplyFlightShiftScreen = () => {
         }}
         onCancel={() => setDatePickerVisible(false)}
       />
-
       {loadingFlights ? (
-        <ActivityIndicator
-          size="small"
-          color="#007AFF"
-          style={{ marginTop: 10 }}
-        />
-      ) : flights.length > 0 ? (
+        <ActivityIndicator size="small" color="#007AFF" style={{ marginTop: 10 }} />
+      ) : flights && flights.length > 0 ? (
         <>
-          <Text style={[styles.label, { marginTop: 20 }]}>
-            Chọn chuyến bay:
-          </Text>
+          <Text style={[styles.label, { marginTop: 20 }]}>Chọn chuyến bay:</Text>
           <View style={styles.pickerContainer}>
             <Picker
               selectedValue={selectedFlightId}
@@ -439,7 +403,7 @@ const ApplyFlightShiftScreen = () => {
               {flights.map((fl) => (
                 <Picker.Item
                   key={fl.id}
-                  label={`${fl.flightNumber} (${fl.departureAirport} → ${fl.arrivalAirport})`}
+                  label={`${fl.flightNumber} (${fl.departureAirport.airportCode} → ${fl.arrivalAirport.airportCode})`}
                   value={fl.id.toString()}
                 />
               ))}
@@ -453,19 +417,13 @@ const ApplyFlightShiftScreen = () => {
           </Text>
         )
       )}
-
       <Button title="Tìm kiếm nhân viên" onPress={handleSearchUsers} />
       {loadingUsers && (
-        <ActivityIndicator
-          size="small"
-          color="#007AFF"
-          style={{ marginTop: 10 }}
-        />
+        <ActivityIndicator size="small" color="#007AFF" style={{ marginTop: 10 }} />
       )}
     </View>
   );
 
-  // --- Render Footer: nút "Áp dụng ca" ---
   const ListFooter = () => (
     <View style={styles.footerContainer}>
       <Button title="Áp dụng ca" onPress={handleApplyShift} />

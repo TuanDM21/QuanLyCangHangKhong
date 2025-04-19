@@ -21,6 +21,11 @@ import SearchFlightScreen from "../screens/SearchFlightScreen";
 import UpdateFlightScreen from "../screens/UpdateFlightScreen";
 import LiveTrackingScreen from "../screens/LiveTrackingScreen";
 import ApplyFlightShiftScreen from "../screens/ApplyFlightShiftScreen";
+import CreateActivityScreen from "../screens/Activity/CreateActivityScreen"
+import ActivityScreen from "../screens/Activity/ActivityScreen"
+import SearchActivityScreen from "../screens/Activity/SearchActivityScreen"
+import EditActivityScreen from "../screens/Activity/EditActivityScreen"
+import MyActivitiesScreen from "../screens/Activity/MyActivitiesScreen"
 const Stack = createStackNavigator();
 
 const AppNavigator = () => {
@@ -64,8 +69,12 @@ const AppNavigator = () => {
             <Stack.Screen name="UpdateFlightScreen" component={UpdateFlightScreen} options={{headerShown: false}}/>
             <Stack.Screen name="LiveTrackingScreen" component={LiveTrackingScreen} options={{headerShown: false}}/>
             <Stack.Screen name="ApplyFlightShiftScreen" component={ApplyFlightShiftScreen} options={{headerShown: false}}/>
+            <Stack.Screen name="CreateActivityScreen" component={CreateActivityScreen} options={{headerShown: false}}/>
+            <Stack.Screen name="ActivityScreen" component={ActivityScreen} options={{headerShown: false}}/>
+            <Stack.Screen name="SearchActivityScreen" component={SearchActivityScreen} options={{headerShown: false}}/>
+            <Stack.Screen name="EditActivityScreen" component={EditActivityScreen} options={{headerShown: false}}/>
+            <Stack.Screen name="MyActivitiesScreen" component={MyActivitiesScreen} options={{headerShown: false}}/>
 
-            
             </>
         )}
       </Stack.Navigator>

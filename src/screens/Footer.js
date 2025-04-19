@@ -19,7 +19,7 @@ const Footer = () => {
 
       <Pressable
         style={styles.button}
-        onPress={() => navigation.navigate("Home")}
+        onPress={() => navigation.navigate("ActivityScreen")}
       >
         <Ionicons name="briefcase" size={20} color="white" />
         <Text style={styles.buttonText} numberOfLines={2}>

@@ -2,78 +2,108 @@ import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
-  TextInput,
   TouchableOpacity,
   StyleSheet,
   Alert,
   ActivityIndicator,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+  TextInput
 } from "react-native";
 import { Picker } from "@react-native-picker/picker";
 import { useNavigation, useRoute } from "@react-navigation/native";
+import DateTimePickerModal from "react-native-modal-datetime-picker";
 import Layout from "./Layout";
 import httpApiClient from "../services";
 
 const UpdateFlightScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
-  const { flight } = route.params;
+  const { flight } = route.params || {};
 
-  // Debug: In ra giá trị flight nhận được
-  useEffect(() => {
-    console.log("Flight nhận được trong UpdateFlightScreen:", flight);
-  }, [flight]);
+  if (!flight) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Text style={styles.errorText}>Không tìm thấy thông tin chuyến bay.</Text>
+      </View>
+    );
+  }
 
-  // Hàm cắt chuỗi thời gian, chỉ lấy "HH:mm"
-  const formatTime = (timeStr) => {
-    if (!timeStr) return "";
-    return timeStr.length >= 5 ? timeStr.substring(0, 5) : timeStr;
-  };
+  // Helper: cắt "HH:mm:ss" → "HH:mm"
+  const formatTime = (t) => (t && t.length >= 5 ? t.substring(0, 5) : "");
 
-  // State khởi tạo với dữ liệu nhận được
+  // Helper: cắt "YYYY-MM-DDThh:mm:ss" hoặc "YYYY-MM-DD" → "YYYY-MM-DD"
+  const formatDate = (d) => (d ? d.substring(0, 10) : "");
+
+  // initial form state
   const [flightNumber, setFlightNumber] = useState(flight.flightNumber || "");
+
   const [selectedDeparture, setSelectedDeparture] = useState(
-    flight.departureAirport || ""
+    typeof flight.departureAirport === "object"
+      ? flight.departureAirport.airportCode
+      : flight.departureAirport
   );
   const [selectedArrival, setSelectedArrival] = useState(
-    flight.arrivalAirport || ""
+    typeof flight.arrivalAirport === "object"
+      ? flight.arrivalAirport.airportCode
+      : flight.arrivalAirport
   );
-  const [departureTime, setDepartureTime] = useState(
-    flight.departureTime ? formatTime(flight.departureTime) : ""
-  );
-  const [arrivalTime, setArrivalTime] = useState(
-    flight.arrivalTime ? formatTime(flight.arrivalTime) : ""
-  );
-  const [flightDate, setFlightDate] = useState(flight.flightDate || "");
 
-  // State cho danh sách sân bay từ backend và trạng thái loading
+  const [departureTime, setDepartureTime] = useState(formatTime(flight.departureTime));
+  const [arrivalTime, setArrivalTime] = useState(formatTime(flight.arrivalTime));
+  const [flightDate, setFlightDate] = useState(formatDate(flight.flightDate));
+
+  // pickers visibility
+  const [showDepTimePicker, setShowDepTimePicker] = useState(false);
+  const [showArrTimePicker, setShowArrTimePicker] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+
+  // airports list
   const [airports, setAirports] = useState([]);
   const [loadingAirports, setLoadingAirports] = useState(false);
 
-  // Lấy danh sách sân bay từ backend khi màn hình mở
   useEffect(() => {
-    const fetchAirports = async () => {
+    (async () => {
       try {
         setLoadingAirports(true);
-        const airports = await httpApiClient.get("airports");
-        const airportsJson = await airports.json();
-        setAirports(airportsJson.data);
-      } catch (error) {
-        console.error(error);
-        Alert.alert("Lỗi", error.message);
+        const res = await httpApiClient.get("airports");
+        const json = await res.json();
+        setAirports(json.data);
+      } catch (e) {
+        Alert.alert("Lỗi", e.message);
       } finally {
         setLoadingAirports(false);
       }
-    };
-    fetchAirports();
+    })();
   }, []);
 
+  // handle pickers
+  const onDepTimeConfirm = (date) => {
+    const hh = date.getHours().toString().padStart(2, "0");
+    const mm = date.getMinutes().toString().padStart(2, "0");
+    setDepartureTime(`${hh}:${mm}`);
+    setShowDepTimePicker(false);
+  };
+  const onArrTimeConfirm = (date) => {
+    const hh = date.getHours().toString().padStart(2, "0");
+    const mm = date.getMinutes().toString().padStart(2, "0");
+    setArrivalTime(`${hh}:${mm}`);
+    setShowArrTimePicker(false);
+  };
+  const onDateConfirm = (date) => {
+    const yyyy = date.getFullYear();
+    const mm = (date.getMonth() + 1).toString().padStart(2, "0");
+    const dd = date.getDate().toString().padStart(2, "0");
+    setFlightDate(`${yyyy}-${mm}-${dd}`);
+    setShowDatePicker(false);
+  };
+
   const handleUpdateFlight = async () => {
-    // Kiểm tra nếu chọn trùng sân bay
     if (selectedDeparture === selectedArrival) {
       Alert.alert("Lỗi", "Sân bay khởi hành và hạ cánh không được trùng nhau.");
       return;
     }
-    // Validate đầy đủ các trường
     if (
       !flightNumber ||
       !selectedDeparture ||
@@ -86,114 +116,159 @@ const UpdateFlightScreen = () => {
       return;
     }
 
-    const updatedFlight = {
+    const depObj = airports.find((a) => a.airportCode === selectedDeparture);
+    const arrObj = airports.find((a) => a.airportCode === selectedArrival);
+    if (!depObj || !arrObj) {
+      Alert.alert("Lỗi", "Không tìm thấy sân bay đã chọn.");
+      return;
+    }
+
+    const payload = {
       flightNumber,
-      departureAirport: selectedDeparture,
-      arrivalAirport: selectedArrival,
-      departureTime, // định dạng "HH:mm"
-      arrivalTime, // định dạng "HH:mm"
-      flightDate, // định dạng "YYYY-MM-DD"
+      departureAirport: { id: depObj.id },
+      arrivalAirport:   { id: arrObj.id },
+      departureTime,   // "HH:mm"
+      arrivalTime,     // "HH:mm"
+      flightDate,      // "YYYY-MM-DD"
     };
 
     try {
-      const response = await httpApiClient.post(`flights/${flight.id}`, {
-        json: updatedFlight,
-      });
-
-      if (response.ok) {
+      const res = await httpApiClient.put(`flights/${flight.id}`, { json: payload });
+      if (res.ok) {
         Alert.alert("Thành công", "Cập nhật chuyến bay thành công", [
           { text: "OK", onPress: () => navigation.goBack() },
         ]);
       } else {
-        const errorJson = await response.json();
-        Alert.alert("Lỗi", errorJson.message || "Cập nhật chuyến bay thất bại");
+        const err = await res.json();
+        Alert.alert("Lỗi", err.message || "Cập nhật thất bại");
       }
-    } catch (error) {
-      console.error("Update flight error:", error);
+    } catch (e) {
+      console.error(e);
       Alert.alert("Lỗi", "Không thể kết nối đến server");
     }
   };
 
   return (
     <Layout>
-      <View style={styles.container}>
-        <Text style={styles.title}>Cập nhật chuyến bay</Text>
-
-        <TextInput
-          style={styles.input}
-          placeholder="Số hiệu chuyến bay"
-          value={flightNumber}
-          onChangeText={setFlightNumber}
-        />
-
-        <Text style={styles.label}>Sân bay khởi hành:</Text>
-        {loadingAirports ? (
-          <ActivityIndicator size="small" color="#007AFF" />
-        ) : (
-          <View style={styles.pickerContainer}>
-            <Picker
-              selectedValue={selectedDeparture}
-              onValueChange={(itemValue) => setSelectedDeparture(itemValue)}
-            >
-              <Picker.Item label="Chọn sân bay khởi hành" value="" />
-              {airports.map((airport) => (
-                <Picker.Item
-                  key={airport.id}
-                  label={`${airport.airportCode} - ${airport.airportName}`}
-                  value={airport.airportCode}
-                />
-              ))}
-            </Picker>
-          </View>
-        )}
-
-        <Text style={styles.label}>Sân bay hạ cánh:</Text>
-        {loadingAirports ? (
-          <ActivityIndicator size="small" color="#007AFF" />
-        ) : (
-          <View style={styles.pickerContainer}>
-            <Picker
-              selectedValue={selectedArrival}
-              onValueChange={(itemValue) => setSelectedArrival(itemValue)}
-            >
-              <Picker.Item label="Chọn sân bay hạ cánh" value="" />
-              {airports.map((airport) => (
-                <Picker.Item
-                  key={airport.id}
-                  label={`${airport.airportCode} - ${airport.airportName}`}
-                  value={airport.airportCode}
-                />
-              ))}
-            </Picker>
-          </View>
-        )}
-
-        <TextInput
-          style={styles.input}
-          placeholder="Giờ khởi hành (HH:mm)"
-          value={departureTime}
-          onChangeText={setDepartureTime}
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Giờ hạ cánh (HH:mm)"
-          value={arrivalTime}
-          onChangeText={setArrivalTime}
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Ngày bay (YYYY-MM-DD)"
-          value={flightDate}
-          onChangeText={setFlightDate}
-        />
-
-        <TouchableOpacity
-          style={styles.updateButton}
-          onPress={handleUpdateFlight}
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
+        <ScrollView
+          contentContainerStyle={styles.container}
+          keyboardShouldPersistTaps="handled"
         >
-          <Text style={styles.buttonText}>Cập nhật chuyến bay</Text>
-        </TouchableOpacity>
-      </View>
+          <Text style={styles.title}>Cập nhật chuyến bay</Text>
+
+          {/* Flight number */}
+          <Text style={styles.label}>Số hiệu chuyến bay:</Text>
+          <TextInput
+            style={styles.input}
+            value={flightNumber}
+            onChangeText={setFlightNumber}
+          />
+
+          {/* Departure airport */}
+          <Text style={styles.label}>Sân bay khởi hành:</Text>
+          {loadingAirports ? (
+            <ActivityIndicator size="small" color="#007AFF" />
+          ) : (
+            <View style={styles.pickerContainer}>
+              <Picker
+                selectedValue={selectedDeparture}
+                onValueChange={setSelectedDeparture}
+              >
+                <Picker.Item label="Chọn…" value="" />
+                {airports.map((a) => (
+                  <Picker.Item
+                    key={a.id}
+                    label={`${a.airportCode} - ${a.airportName}`}
+                    value={a.airportCode}
+                  />
+                ))}
+              </Picker>
+            </View>
+          )}
+
+          {/* Arrival airport */}
+          <Text style={styles.label}>Sân bay hạ cánh:</Text>
+          {loadingAirports ? (
+            <ActivityIndicator size="small" color="#007AFF" />
+          ) : (
+            <View style={styles.pickerContainer}>
+              <Picker
+                selectedValue={selectedArrival}
+                onValueChange={setSelectedArrival}
+              >
+                <Picker.Item label="Chọn…" value="" />
+                {airports.map((a) => (
+                  <Picker.Item
+                    key={a.id}
+                    label={`${a.airportCode} - ${a.airportName}`}
+                    value={a.airportCode}
+                  />
+                ))}
+              </Picker>
+            </View>
+          )}
+
+          {/* Departure time */}
+          <Text style={styles.label}>Giờ cất cánh:</Text>
+          <TouchableOpacity
+            style={styles.input}
+            onPress={() => setShowDepTimePicker(true)}
+          >
+            <Text style={{ color: departureTime ? "#000" : "#888" }}>
+              {departureTime || "Chọn giờ"}
+            </Text>
+          </TouchableOpacity>
+          <DateTimePickerModal
+            isVisible={showDepTimePicker}
+            mode="time"
+            onConfirm={onDepTimeConfirm}
+            onCancel={() => setShowDepTimePicker(false)}
+          />
+
+          {/* Arrival time */}
+          <Text style={styles.label}>Giờ hạ cánh:</Text>
+          <TouchableOpacity
+            style={styles.input}
+            onPress={() => setShowArrTimePicker(true)}
+          >
+            <Text style={{ color: arrivalTime ? "#000" : "#888" }}>
+              {arrivalTime || "Chọn giờ"}
+            </Text>
+          </TouchableOpacity>
+          <DateTimePickerModal
+            isVisible={showArrTimePicker}
+            mode="time"
+            onConfirm={onArrTimeConfirm}
+            onCancel={() => setShowArrTimePicker(false)}
+          />
+
+          {/* Flight date */}
+          <Text style={styles.label}>Ngày bay:</Text>
+          <TouchableOpacity
+            style={styles.input}
+            onPress={() => setShowDatePicker(true)}
+          >
+            <Text style={{ color: flightDate ? "#000" : "#888" }}>
+              {flightDate || "Chọn ngày"}
+            </Text>
+          </TouchableOpacity>
+          <DateTimePickerModal
+            isVisible={showDatePicker}
+            mode="date"
+            onConfirm={onDateConfirm}
+            onCancel={() => setShowDatePicker(false)}
+          />
+
+          {/* Submit */}
+          <TouchableOpacity style={styles.button} onPress={handleUpdateFlight}>
+            <Text style={styles.buttonText}>Cập nhật chuyến bay</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </Layout>
   );
 };
@@ -202,10 +277,8 @@ export default UpdateFlightScreen;
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    backgroundColor: "#E0F2FE",
     padding: 20,
-    justifyContent: "center",
+    backgroundColor: "#E0F2FE",
   },
   title: {
     fontSize: 24,
@@ -217,16 +290,16 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 16,
     fontWeight: "600",
+    marginTop: 10,
     marginBottom: 5,
   },
   input: {
     backgroundColor: "white",
-    padding: 10,
+    padding: 12,
     borderRadius: 5,
-    marginBottom: 15,
-    fontSize: 16,
     borderWidth: 1,
     borderColor: "#ccc",
+    marginBottom: 15,
   },
   pickerContainer: {
     backgroundColor: "white",
@@ -235,16 +308,26 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     marginBottom: 15,
   },
-  updateButton: {
+  button: {
     backgroundColor: "#007AFF",
-    paddingVertical: 15,
+    paddingVertical: 14,
     borderRadius: 8,
     alignItems: "center",
-    marginTop: 10,
+    marginTop: 20,
   },
   buttonText: {
     color: "white",
     fontWeight: "bold",
     fontSize: 18,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  errorText: {
+    color: "red",
+    textAlign: "center",
+    fontSize: 16,
   },
 });

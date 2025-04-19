@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -8,29 +8,45 @@ import {
   StyleSheet,
   ActivityIndicator,
   Alert,
+  Button,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import Layout from "./Layout"; // Component Layout bọc chung giao diện ứng dụng của bạn
+import Layout from "./Layout";
 import { useNavigation } from "@react-navigation/native";
+import DateTimePickerModal from "react-native-modal-datetime-picker";
 import httpApiClient from "../services";
 
+// Hàm định dạng Date thành chuỗi "YYYY-MM-DD"
+const formatDate = (date) => {
+  if (!date) return "";
+  return date.toISOString().split("T")[0];
+};
+
+// Hàm định dạng giờ "HH:mm:ss" thành "HH:mm"
+const formatTime = (timeStr) => {
+  if (!timeStr) return "";
+  return timeStr.length >= 5 ? timeStr.substring(0, 5) : timeStr;
+};
+
 const SearchFlightScreen = () => {
-  const [searchDate, setSearchDate] = useState("");
+  const [searchDate, setSearchDate] = useState(new Date());
   const [searchKeyword, setSearchKeyword] = useState("");
   const [flights, setFlights] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [isDatePickerVisible, setIsDatePickerVisible] = useState(false);
   const navigation = useNavigation();
 
   // Hàm tìm kiếm chuyến bay theo ngày và từ khóa (tìm kiếm chính xác theo ngày)
   const handleSearch = async () => {
     if (!searchDate) {
-      Alert.alert("Lỗi", "Vui lòng nhập ngày chuyến bay (YYYY-MM-DD)");
+      Alert.alert("Lỗi", "Vui lòng chọn ngày chuyến bay");
       return;
     }
     try {
       setLoading(true);
+      const dateStr = formatDate(searchDate);
       const data = await httpApiClient.get(
-        `flights/searchByDateAndKeyword?date=${searchDate}&keyword=${searchKeyword}`
+        `flights/searchByDateAndKeyword?date=${dateStr}&keyword=${searchKeyword}`
       );
       const dataJson = await data.json();
       setFlights(dataJson.data);
@@ -40,13 +56,6 @@ const SearchFlightScreen = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  // Hàm formatTime: cắt chuỗi thời gian thành định dạng "HH:mm"
-  const formatTime = (timeStr) => {
-    if (!timeStr) return "";
-    // Nếu timeStr có dạng "HH:mm:ss", chỉ lấy phần "HH:mm"
-    return timeStr.length >= 5 ? timeStr.substring(0, 5) : timeStr;
   };
 
   // Hàm xử lý cập nhật chuyến bay
@@ -85,9 +94,13 @@ const SearchFlightScreen = () => {
         🕒 {formatTime(item.departureTime)} - {formatTime(item.arrivalTime)}
       </Text>
       <Text style={styles.flightText}>📅 {item.flightDate}</Text>
-      <Text style={styles.flightText}>
-        📍 {item.departureAirport} → {item.arrivalAirport}
+      {/* Hiển thị mã sân bay (không render object) */}
+      <Text style={styles.infoText}>
+        {item.departureAirport?.airportCode ?? "Chưa xác định"}{" "}
+        {"→"}{" "}
+        {item.arrivalAirport?.airportCode ?? "Chưa xác định"}
       </Text>
+
       <View style={styles.buttonContainer}>
         <TouchableOpacity
           style={[styles.button, styles.updateButton]}
@@ -111,11 +124,23 @@ const SearchFlightScreen = () => {
     <Layout>
       <View style={styles.container}>
         <Text style={styles.title}>Tìm kiếm chuyến bay</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Nhập ngày chuyến bay (YYYY-MM-DD)"
-          value={searchDate}
-          onChangeText={setSearchDate}
+        {/* Date Picker thay vì TextInput cho ngày */}
+        <TouchableOpacity
+          style={styles.dateButton}
+          onPress={() => setIsDatePickerVisible(true)}
+        >
+          <Text style={styles.dateText}>
+            {searchDate ? formatDate(searchDate) : "Chọn ngày chuyến bay"}
+          </Text>
+        </TouchableOpacity>
+        <DateTimePickerModal
+          isVisible={isDatePickerVisible}
+          mode="date"
+          onConfirm={(date) => {
+            setSearchDate(date);
+            setIsDatePickerVisible(false);
+          }}
+          onCancel={() => setIsDatePickerVisible(false)}
         />
         <TextInput
           style={styles.input}
@@ -127,11 +152,7 @@ const SearchFlightScreen = () => {
           <Text style={styles.searchButtonText}>Tìm kiếm</Text>
         </TouchableOpacity>
         {loading ? (
-          <ActivityIndicator
-            size="large"
-            color="#007AFF"
-            style={{ marginTop: 20 }}
-          />
+          <ActivityIndicator size="large" color="#007AFF" style={{ marginTop: 20 }} />
         ) : (
           <FlatList
             data={flights}
@@ -174,6 +195,19 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#ccc",
   },
+  dateButton: {
+    backgroundColor: "white",
+    padding: 10,
+    borderRadius: 5,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: "#ccc",
+    alignItems: "center",
+  },
+  dateText: {
+    fontSize: 16,
+    color: "#333",
+  },
   searchButton: {
     backgroundColor: "#007AFF",
     paddingVertical: 12,
@@ -214,6 +248,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#333",
     marginBottom: 4,
+  },
+  infoText: {
+    fontSize: 16,
+    color: "#333",
+    marginVertical: 4,
+    fontStyle: "italic",
   },
   buttonContainer: {
     flexDirection: "row",
