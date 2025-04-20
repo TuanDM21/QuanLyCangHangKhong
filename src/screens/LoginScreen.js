@@ -16,7 +16,6 @@ const LoginScreen = ({ navigation, setIsLoggedIn }) => {
     });
 
     const loginJson = await loginResponse.json();
-
     if (loginJson.success) {
       const { accessToken } = loginJson.data;
       await AsyncStorage.setItem("userToken", accessToken);
@@ -41,7 +40,9 @@ const LoginScreen = ({ navigation, setIsLoggedIn }) => {
       <TextInput
         placeholder="Email"
         value={email}
-        onChangeText={setEmail}
+        autoCapitalize="none"
+        keyboardType="email-address"
+        onChangeText={(text) => setEmail(text.toLowerCase())}
         style={{ borderWidth: 1, width: 200, marginBottom: 10, padding: 5 }}
       />
       <TextInput
