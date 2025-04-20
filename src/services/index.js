@@ -2,9 +2,10 @@ import ky from "ky";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Alert } from "react-native";
 
+const BASE_API_URL = process.env.EXPO_PUBLIC_BASE_API_URL;
+
 const httpApiClient = ky.create({
-  prefixUrl: "http://10.0.2.2:8080/api/",
-  // prefixUrl: "http://10.0.10.32:8080/api/",
+  prefixUrl: `${BASE_API_URL}/api/`,
   timeout: 10000,
   throwHttpErrors: false,
   hooks: {
