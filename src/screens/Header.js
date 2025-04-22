@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -7,34 +7,113 @@ import {
   FlatList,
   StatusBar,
   SafeAreaView,
+  ActivityIndicator,
 } from "react-native";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
+
+// const BACKEND_URL = "http://10.0.2.2:8080"; // Thay bằng địa chỉ backend thực tế
+const BACKEND_URL = "http://192.168.1.5:8080"; // Thay bằng địa chỉ backend thực tế
+
+
 
 const Header = ({ setIsLoggedIn }) => {
-  const [notificationModalVisible, setNotificationModalVisible] =
-    useState(false);
+  const [notificationModalVisible, setNotificationModalVisible] = useState(false);
   const [userModalVisible, setUserModalVisible] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [loading, setLoading] = useState(false);
   const navigation = useNavigation();
 
-  // Danh sách thông báo
-  const notifications = [
-    "Bạn có lịch họp vào 10:00 AM",
-    "Chuyến bay VN123 bị hoãn",
-    "Báo cáo tháng đã sẵn sàng",
-    "Nhắc nhở: Kiểm tra lịch trình hôm nay",
-    "Hệ thống sẽ bảo trì vào 23:00",
-  ];
+  // Lấy token từ AsyncStorage
+  const getToken = async () => {
+    return await AsyncStorage.getItem("userToken");
+  };
 
+  // Gọi API lấy notification
+  const fetchNotifications = async () => {
+    setLoading(true);
+    const token = await getToken();
+    if (!token) return;
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/notifications`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (data.success) setNotifications(data.data || []);
+    } catch (e) {
+      setNotifications([]);
+    }
+    setLoading(false);
+  };
+
+  // Gọi API lấy số lượng chưa đọc
+  const fetchUnreadCount = async () => {
+    const token = await getToken();
+    if (!token) return;
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/notifications/unread-count`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (data.success) setUnreadCount(data.data || 0);
+    } catch (e) {
+      setUnreadCount(0);
+    }
+  };
+
+  // Đánh dấu đã đọc notification
+  const markAsRead = async (id) => {
+    const token = await getToken();
+    if (!token) return;
+    try {
+      await fetch(`${BACKEND_URL}/api/notifications/read/${id}`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      // Cập nhật local state để phản ánh ngay trên UI
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
+      );
+      setUnreadCount((prev) => (prev > 0 ? prev - 1 : 0));
+    } catch (e) {}
+  };
+
+  // Khi mở modal notification, fetch lại dữ liệu
+  useEffect(() => {
+    if (notificationModalVisible) {
+      fetchNotifications();
+      fetchUnreadCount();
+    }
+  }, [notificationModalVisible]);
+
+  // Luôn fetch số notification chưa đọc khi Header mount và khi chuyển màn hình
+  useEffect(() => {
+    fetchUnreadCount();
+    // Polling mỗi 15s để realtime
+    const interval = setInterval(() => {
+      fetchUnreadCount();
+    }, 15000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchUnreadCount();
+    }, [])
+  );
+
+  // Đăng xuất
   const handleLogout = async () => {
     try {
       await AsyncStorage.removeItem("userToken");
-      setIsLoggedIn(false); // Chuyển về màn hình Login
+      setIsLoggedIn(false);
     } catch (error) {
       console.error("Lỗi khi đăng xuất:", error);
     }
   };
+
   return (
     <SafeAreaView style={{ backgroundColor: "white" }}>
       <View
@@ -65,7 +144,7 @@ const Header = ({ setIsLoggedIn }) => {
             style={{ marginRight: 15 }}
           >
             <MaterialIcons name="notifications" size={28} color="#ffcc00" />
-            {notifications.length > 0 && (
+            {unreadCount > 0 && (
               <View
                 style={{
                   position: "absolute",
@@ -82,7 +161,7 @@ const Header = ({ setIsLoggedIn }) => {
                 <Text
                   style={{ color: "white", fontSize: 12, fontWeight: "bold" }}
                 >
-                  {notifications.length}
+                  {unreadCount}
                 </Text>
               </View>
             )}
@@ -114,6 +193,7 @@ const Header = ({ setIsLoggedIn }) => {
               margin: 20,
               padding: 20,
               borderRadius: 10,
+              maxHeight: "80%",
             }}
           >
             <Text
@@ -121,13 +201,62 @@ const Header = ({ setIsLoggedIn }) => {
             >
               Thông báo
             </Text>
-            <FlatList
-              data={notifications}
-              renderItem={({ item }) => (
-                <Text style={{ paddingVertical: 5 }}>- {item}</Text>
-              )}
-              keyExtractor={(item, index) => index.toString()}
-            />
+            {loading ? (
+              <ActivityIndicator size="large" color="#007bff" />
+            ) : (
+              <FlatList
+                data={notifications}
+                renderItem={({ item }) => (
+                  <View
+                    style={{
+                      borderBottomWidth: 1,
+                      borderBottomColor: "#eee",
+                      paddingVertical: 8,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontWeight: item.isRead ? "normal" : "bold",
+                        color: item.isRead ? "#333" : "#007bff",
+                        fontSize: 16,
+                      }}
+                    >
+                      {item.title}
+                    </Text>
+                    <Text style={{ fontSize: 13, color: "#888", marginBottom: 6 }}>
+                      {item.content}
+                    </Text>
+                    {!item.isRead ? (
+                      <TouchableOpacity
+                        onPress={() => markAsRead(item.id)}
+                        style={{
+                          alignSelf: "flex-end",
+                          backgroundColor: "#007bff",
+                          paddingHorizontal: 14,
+                          paddingVertical: 6,
+                          borderRadius: 6,
+                        }}
+                      >
+                        <Text style={{ color: "white" }}>Đã đọc</Text>
+                      </TouchableOpacity>
+                    ) : (
+                      <Text
+                        style={{
+                          alignSelf: "flex-end",
+                          color: "green",
+                          fontStyle: "italic",
+                          fontSize: 13,
+                        }}
+                      >
+                        Đã đọc
+                      </Text>
+                    )}
+                  </View>
+                )}
+                keyExtractor={(item) => item.id.toString()}
+                ListEmptyComponent={<Text>Không có thông báo</Text>}
+              />
+            )}
             <TouchableOpacity
               onPress={() => setNotificationModalVisible(false)}
               style={{ marginTop: 15 }}
@@ -167,8 +296,8 @@ const Header = ({ setIsLoggedIn }) => {
             <TouchableOpacity
               style={{ paddingVertical: 10 }}
               onPress={() => {
-                setUserModalVisible(false); // Đóng modal
-                navigation.navigate("ProfileScreen"); // Điều hướng đến màn hình thông tin cá nhân
+                setUserModalVisible(false);
+                navigation.navigate("ProfileScreen");
               }}
             >
               <Text>Thông tin cá nhân</Text>
