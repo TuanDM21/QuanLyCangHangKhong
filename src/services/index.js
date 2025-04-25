@@ -5,7 +5,10 @@ import { Alert } from "react-native";
 const httpApiClient = ky.create({
   // prefixUrl: "http://10.0.2.2:8080/api/",
   // prefixUrl: "http://10.0.10.32:8080/api/",
-  prefixUrl: "http://192.168.1.5:8080/api/",
+  //  prefixUrl: "http://192.168.1.5:8080/api/",
+  // prefixUrl: "http://192.168.13.74:8080/api/",
+  prefixUrl: "http://192.168.13.74:8080/api/",
+  
   timeout: 10000,
   throwHttpErrors: false,
   hooks: {

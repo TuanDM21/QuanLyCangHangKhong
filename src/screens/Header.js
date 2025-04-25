@@ -12,19 +12,20 @@ import {
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
+import { useAuth } from "../context/AuthContext";
 
-// const BACKEND_URL = "http://10.0.2.2:8080"; // Thay bằng địa chỉ backend thực tế
-const BACKEND_URL = "http://192.168.1.5:8080"; // Thay bằng địa chỉ backend thực tế
+const BACKEND_URL = "http://192.168.13.74:8080";
+// const BACKEND_URL = "http://10.0.2.2:8080";
+// const BACKEND_URL = "http://192.168.1.5:8080";
 
-
-
-const Header = ({ setIsLoggedIn }) => {
+const Header = () => {
   const [notificationModalVisible, setNotificationModalVisible] = useState(false);
   const [userModalVisible, setUserModalVisible] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const navigation = useNavigation();
+  const { setIsLoggedIn } = useAuth();
 
   // Lấy token từ AsyncStorage
   const getToken = async () => {
@@ -35,13 +36,17 @@ const Header = ({ setIsLoggedIn }) => {
   const fetchNotifications = async () => {
     setLoading(true);
     const token = await getToken();
-    if (!token) return;
+    if (!token) {
+      setLoading(false);
+      return;
+    }
     try {
       const res = await fetch(`${BACKEND_URL}/api/notifications`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = await res.json();
       if (data.success) setNotifications(data.data || []);
+      else setNotifications([]);
     } catch (e) {
       setNotifications([]);
     }
@@ -58,6 +63,7 @@ const Header = ({ setIsLoggedIn }) => {
       });
       const data = await res.json();
       if (data.success) setUnreadCount(data.data || 0);
+      else setUnreadCount(0);
     } catch (e) {
       setUnreadCount(0);
     }
@@ -72,7 +78,6 @@ const Header = ({ setIsLoggedIn }) => {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` }
       });
-      // Cập nhật local state để phản ánh ngay trên UI
       setNotifications((prev) =>
         prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
       );
@@ -80,23 +85,13 @@ const Header = ({ setIsLoggedIn }) => {
     } catch (e) {}
   };
 
-  // Khi mở modal notification, fetch lại dữ liệu
+  // Chỉ fetch khi mở modal hoặc khi focus màn hình
   useEffect(() => {
     if (notificationModalVisible) {
       fetchNotifications();
       fetchUnreadCount();
     }
   }, [notificationModalVisible]);
-
-  // Luôn fetch số notification chưa đọc khi Header mount và khi chuyển màn hình
-  useEffect(() => {
-    fetchUnreadCount();
-    // Polling mỗi 15s để realtime
-    const interval = setInterval(() => {
-      fetchUnreadCount();
-    }, 15000);
-    return () => clearInterval(interval);
-  }, []);
 
   useFocusEffect(
     useCallback(() => {
@@ -107,9 +102,24 @@ const Header = ({ setIsLoggedIn }) => {
   // Đăng xuất
   const handleLogout = async () => {
     try {
+      const userToken = await AsyncStorage.getItem("userToken");
+      if (userToken) {
+        try {
+          await fetch(`${BACKEND_URL}/api/users/logout-cleanup`, {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${userToken}`,
+            },
+          });
+        } catch (err) {}
+      }
       await AsyncStorage.removeItem("userToken");
+      await AsyncStorage.removeItem("expoPushToken");
       setIsLoggedIn(false);
     } catch (error) {
+      await AsyncStorage.removeItem("userToken");
+      await AsyncStorage.removeItem("expoPushToken");
+      setIsLoggedIn(false);
       console.error("Lỗi khi đăng xuất:", error);
     }
   };

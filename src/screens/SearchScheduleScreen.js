@@ -223,16 +223,13 @@ const SearchScheduleScreen = () => {
             <Text style={styles.title}>Tìm kiếm lịch trực</Text>
 
             {/* TextInput này thay vì cho gõ tay, ta cho onFocus mở picker, hoặc làm Button riêng */}
-            <TouchableOpacity onPress={showDatePicker}>
-              <TextInput
-                style={styles.input}
-                placeholder="Nhập ngày (YYYY-MM-DD)"
-                value={shiftDate}
-                onChangeText={setShiftDate}
-                // Không cho gõ tay (chỉ cho ấn chọn):
-                editable={false}
-              />
-            </TouchableOpacity>
+            <TouchableOpacity onPress={showDatePicker} activeOpacity={1}>
+  <View style={styles.input}>
+    <Text style={{ color: shiftDate ? "#222" : "#aaa" }}>
+      {shiftDate || "Nhập ngày (YYYY-MM-DD)"}
+    </Text>
+  </View>
+</TouchableOpacity>
 
             <Text style={styles.label}>Chọn Team (ID):</Text>
             <View style={styles.pickerContainer}>

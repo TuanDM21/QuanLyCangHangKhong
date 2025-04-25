@@ -1,7 +1,5 @@
 import React, { useState } from "react";
-import { 
-  View, Text, FlatList, StyleSheet
-} from "react-native";
+import { View, Text, FlatList, StyleSheet } from "react-native";
 import Layout from "./Layout";
 
 const newsData = [
@@ -18,11 +16,11 @@ const NewsItem = ({ title, content }) => (
   </View>
 );
 
-const HomeScreen = ({ navigation, setIsLoggedIn }) => {
+const HomeScreen = ({ navigation }) => {
   const [news] = useState(newsData);
 
   return (
-    <Layout navigation={navigation} setIsLoggedIn={setIsLoggedIn}>
+    <Layout navigation={navigation}>
       <View style={styles.container}>
         <Text style={styles.header}>Tin Tức Chính</Text>
         <FlatList
@@ -34,7 +32,6 @@ const HomeScreen = ({ navigation, setIsLoggedIn }) => {
     </Layout>
   );
 };
-  
 
 const styles = StyleSheet.create({
   container: {

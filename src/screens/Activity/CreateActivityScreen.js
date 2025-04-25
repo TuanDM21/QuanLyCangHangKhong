@@ -24,9 +24,9 @@ const PARTICIPANT_TYPES = [
   { label: "Unit", value: "UNIT" },
 ];
 
-// Hàm format local datetime thành "YYYY-MM-DDTHH:mm:ss"
+// Hàm định dạng local time thành "YYYY-MM-DDTHH:mm:ss"
 function toLocalISOString(date) {
-  const pad = n => n.toString().padStart(2, "0");
+  const pad = (n) => (n < 10 ? "0" + n : n);
   return (
     date.getFullYear() +
     "-" +
@@ -39,6 +39,22 @@ function toLocalISOString(date) {
     pad(date.getMinutes()) +
     ":" +
     pad(date.getSeconds())
+  );
+}
+
+// Hàm hiển thị local time "YYYY-MM-DD HH:mm"
+function formatDateTime(d) {
+  const pad = (n) => (n < 10 ? "0" + n : n);
+  return (
+    d.getFullYear() +
+    "-" +
+    pad(d.getMonth() + 1) +
+    "-" +
+    pad(d.getDate()) +
+    " " +
+    pad(d.getHours()) +
+    ":" +
+    pad(d.getMinutes())
   );
 }
 
@@ -106,7 +122,6 @@ export default function CreateActivityScreen() {
     fetchUsers();
   }, [userSearch, participantType]);
 
-  const formatDateTime = (d) => d.toLocaleString("vi-VN", { hour12: false }).replace(",", "");
   const createActivity = (payload) =>
     httpApiClient.post("activities", { json: payload });
 
@@ -167,8 +182,9 @@ export default function CreateActivityScreen() {
     const payload = {
       name,
       location,
-      startTime: toLocalISOString(startTime), // Sửa: dùng local time
-      endTime: toLocalISOString(endTime),     // Sửa: dùng local time
+      // Gửi local time thay vì UTC để không bị trừ giờ
+      startTime: toLocalISOString(startTime),
+      endTime: toLocalISOString(endTime),
       notes,
       participants,
     };
@@ -232,22 +248,36 @@ export default function CreateActivityScreen() {
             <TextInput style={styles.input} placeholder="Tìm kiếm user..." value={userSearch} onChangeText={setUserSearch} />
           )}
 
-          {participantType==="TEAM" && (
-            <View style={styles.input}>
-              <Picker selectedValue={selectedTeam?.id} onValueChange={id=>setSelectedTeam(teams.find(t=>t.id===id)||null)}>
-                <Picker.Item label="Chọn team" value={null} />
-                {teams.map(t=> <Picker.Item key={t.id} label={t.teamName} value={t.id}/>)}
-              </Picker>
-            </View>
+          {participantType === "TEAM" && (
+            <Picker
+              selectedValue={selectedTeam ? String(selectedTeam.id) : ""}
+              onValueChange={id => {
+                if (id === "") setSelectedTeam(null);
+                else setSelectedTeam(teams.find(t => String(t.id) === id) || null);
+              }}
+              style={{ marginBottom: 15 }}
+            >
+              <Picker.Item label="Chọn team" value="" />
+              {teams.map(t => (
+                <Picker.Item key={t.id} label={t.teamName} value={String(t.id)} />
+              ))}
+            </Picker>
           )}
 
-          {participantType==="UNIT" && (
-            <View style={styles.input}>
-              <Picker selectedValue={selectedUnit?.id} onValueChange={id=>setSelectedUnit(units.find(u=>u.id===id)||null)}>
-                <Picker.Item label="Chọn unit" value={null} />
-                {units.map(u=> <Picker.Item key={u.id} label={u.unitName} value={u.id}/>)}
-              </Picker>
-            </View>
+          {participantType === "UNIT" && (
+            <Picker
+              selectedValue={selectedUnit ? String(selectedUnit.id) : ""}
+              onValueChange={id => {
+                if (id === "") setSelectedUnit(null);
+                else setSelectedUnit(units.find(u => String(u.id) === id) || null);
+              }}
+              style={{ marginBottom: 15 }}
+            >
+              <Picker.Item label="Chọn unit" value="" />
+              {units.map(u => (
+                <Picker.Item key={u.id} label={u.unitName} value={String(u.id)} />
+              ))}
+            </Picker>
           )}
 
           <Button title="Thêm người tham gia" onPress={handleAddParticipant} />
@@ -305,4 +335,4 @@ const styles = StyleSheet.create({
   partRow:{flexDirection:"row",alignItems:"center",marginBottom:5},
   partText:{flex:1},
   removeText:{color:"red"},
-}); 
+});

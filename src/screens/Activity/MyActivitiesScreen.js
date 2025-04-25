@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, FlatList, ActivityIndicator, StyleSheet, TouchableOpacity } from "react-native";
+import { View, Text, FlatList, ActivityIndicator, StyleSheet } from "react-native";
 import httpApiClient from "../../services";
 import { Calendar } from "react-native-calendars";
 import Layout from "../Layout";
@@ -25,21 +25,32 @@ function getWeekRange(dateStr) {
   };
 }
 
-// Lấy ngày YYYY-MM-DD local
+// Lấy ngày YYYY-MM-DD theo local Việt Nam (không bị lệch timezone)
 function getVNDateString(input) {
-  let d = typeof input === "string" ? new Date(input) : new Date(input);
+  if (typeof input === "string" && input.length >= 10) {
+    return input.slice(0, 10);
+  }
+  const d = new Date(input);
   const year = d.getFullYear();
   const month = (d.getMonth() + 1).toString().padStart(2, "0");
   const date = d.getDate().toString().padStart(2, "0");
   return `${year}-${month}-${date}`;
 }
 
-// Định dạng thời gian theo pattern YYYY-MM-DD HH:mm:ss
+// Định dạng ngày kiểu Việt Nam DD/MM/YYYY
+function formatVNDate(dateStr) {
+  if (!dateStr) return "";
+  const [y, m, d] = dateStr.split("-");
+  return `${d}/${m}/${y}`;
+}
+
+// Định dạng thời gian theo pattern DD/MM/YYYY HH:mm
 function formatDateTime(dt) {
   if (!dt) return "";
-  const d = typeof dt === "string" ? new Date(dt) : dt;
-  const pad = n => n.toString().padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  const date = getVNDateString(dt);
+  const [y, m, d] = date.split("-");
+  const time = typeof dt === "string" && dt.length >= 16 ? dt.slice(11, 16) : "";
+  return `${d}/${m}/${y} ${time}`;
 }
 
 const MyActivitiesScreen = () => {
@@ -72,16 +83,16 @@ const MyActivitiesScreen = () => {
     setWeekRange(getWeekRange(selectedDate));
   }, [selectedDate]);
 
-  // Lọc activity trong tuần đang chọn
+  // Lọc activity trong tuần đang chọn (dùng getVNDateString để không bị lệch ngày)
   const weekActivities = activities.filter(act => {
-    const actDate = act.startTime?.slice(0, 10);
+    const actDate = getVNDateString(act.startTime);
     return actDate >= weekRange.start && actDate <= weekRange.end;
   });
 
-  // Đánh dấu ngày có activity trên calendar
+  // Đánh dấu ngày có activity trên calendar (dùng getVNDateString)
   const markedDates = {};
   activities.forEach(act => {
-    const day = act.startTime?.slice(0, 10);
+    const day = getVNDateString(act.startTime);
     if (day) markedDates[day] = { marked: true, dotColor: "#007AFF" };
   });
   markedDates[selectedDate] = { ...(markedDates[selectedDate] || {}), selected: true, selectedColor: "#007AFF" };
@@ -113,7 +124,7 @@ const MyActivitiesScreen = () => {
           }}
         />
         <Text style={styles.weekRangeText}>
-          Tuần: {weekRange.start} - {weekRange.end}
+          Tuần: {formatVNDate(weekRange.start)} - {formatVNDate(weekRange.end)}
         </Text>
         <FlatList
           data={weekActivities}

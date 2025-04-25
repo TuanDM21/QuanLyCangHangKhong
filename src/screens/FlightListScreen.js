@@ -10,7 +10,7 @@ import {
   Modal,
   TextInput,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import Layout from "./Layout";
 import httpApiClient from "../services";
@@ -23,8 +23,12 @@ const FlightListScreen = () => {
   // Modal controls
   const [modalVisible, setModalVisible] = useState(false);
   const [currentFlightId, setCurrentFlightId] = useState(null);
-  const [timeType, setTimeType] = useState(""); 
+  const [timeType, setTimeType] = useState("");
   const [newTime, setNewTime] = useState("");
+
+  // Bell notification state
+  const [notifiedFlights, setNotifiedFlights] = useState({});
+  const [notifyDialog, setNotifyDialog] = useState({ visible: false, flightId: null, field: "" });
 
   useEffect(() => {
     fetchFlights();
@@ -53,48 +57,77 @@ const FlightListScreen = () => {
   };
 
   // Cập nhật giờ thực tế lên server
-// … trong FlightListScreen.js …
+  const updateTime = async () => {
+    if (!/^\d\d:\d\d$/.test(newTime)) {
+      return Alert.alert("Lỗi", "Hãy nhập giờ theo định dạng HH:mm");
+    }
+    const payload = { [timeType]: newTime + ":00" };
+    try {
+      const res = await httpApiClient.patch(
+        `flights/${currentFlightId}/times`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        }
+      );
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        throw new Error(json.message || `HTTP ${res.status}`);
+      }
+      Alert.alert("Thành công", json.message || "Đã cập nhật giờ");
+      setModalVisible(false);
+      fetchFlights();
+    } catch (e) {
+      Alert.alert("Lỗi", e.message);
+    }
+  };
 
-// … trong FlightListScreen.js …
+  // Hiện dialog xác nhận gửi thông báo
+  const handleSendNotification = (flightId, field) => {
+    setNotifyDialog({ visible: true, flightId, field });
+  };
 
-// … trong FlightListScreen.js …
-
-const updateTime = async () => {
-  if (!/^\d\d:\d\d$/.test(newTime)) {
-    return Alert.alert("Lỗi", "Hãy nhập giờ theo định dạng HH:mm");
+  // Xác nhận gửi thông báo
+// Xác nhận gửi thông báo
+const confirmSendNotification = async () => {
+  const { flightId, field } = notifyDialog;
+  // Lấy giá trị actual time từ flights state
+  const flight = flights.find(f => f.id === flightId);
+  let actualTime = "";
+  if (field === "actualArrivalTime") actualTime = flight?.actualArrivalTime;
+  if (field === "actualDepartureTimeAtArrival") actualTime = flight?.actualDepartureTimeAtArrival;
+  if (!actualTime) {
+    Alert.alert("Lỗi", "Chưa có giờ thực tế để gửi thông báo!");
+    setNotifyDialog({ visible: false, flightId: null, field: "" });
+    return;
   }
-
-  const payload = { [timeType]: newTime + ":00" };
-  console.log('[updateTime] PATCH /api/flights/' + currentFlightId + '/times', payload);
-
   try {
+    // Gửi PATCH với payload đúng field
+    const payload = { [field]: actualTime };
     const res = await httpApiClient.patch(
-      `flights/${currentFlightId}/times`,
+      `flights/${flightId}/actual-time-notify`,
       {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       }
     );
-    console.log('[updateTime] status', res.status);
     const json = await res.json();
-    console.log('[updateTime] body', json);
-
     if (!res.ok || !json.success) {
       throw new Error(json.message || `HTTP ${res.status}`);
     }
-
-    Alert.alert("Thành công", json.message || "Đã cập nhật giờ");
-    setModalVisible(false);
-    fetchFlights();
+    Alert.alert("Thành công", json.message || "Đã gửi thông báo!");
+    setNotifiedFlights(prev => ({
+      ...prev,
+      [`${flightId}_${field}`]: true,
+    }));
   } catch (e) {
-    console.error('[updateTime] ERR', e);
     Alert.alert("Lỗi", e.message);
+  } finally {
+    setNotifyDialog({ visible: false, flightId: null, field: "" });
   }
 };
-
-
-
 
   // Hàm cắt chuỗi thời gian "HH:mm:ss" thành "HH:mm"
   const formatTime = (timeStr) => {
@@ -152,9 +185,7 @@ const updateTime = async () => {
         {/* Cất cánh thực tế tại sân bay đi */}
         <View style={styles.timeRow}>
           <Text style={styles.label}>
-            Cất cánh thực tế tại{" "}
-            {/* Chỉ in mã sân bay */}
-            {item.departureAirport?.airportCode ?? "Chưa xác định"}:
+            Cất cánh thực tế tại {item.departureAirport?.airportCode ?? "Chưa xác định"}:
           </Text>
           <Text style={styles.timeValue}>
             {formatTime(item.actualDepartureTime)}
@@ -165,13 +196,13 @@ const updateTime = async () => {
           >
             <Text style={styles.btnText}>Cập nhật</Text>
           </TouchableOpacity>
+          {/* KHÔNG hiển thị chuông ở dòng này */}
         </View>
 
         {/* Hạ cánh thực tế tại sân bay đến */}
         <View style={styles.timeRow}>
           <Text style={styles.label}>
-            Hạ cánh thực tế tại{" "}
-            {item.arrivalAirport?.airportCode ?? "Chưa xác định"}:
+            Hạ cánh thực tế tại {item.arrivalAirport?.airportCode ?? "Chưa xác định"}:
           </Text>
           <Text style={styles.timeValue}>
             {formatTime(item.actualArrivalTime)}
@@ -182,13 +213,26 @@ const updateTime = async () => {
           >
             <Text style={styles.btnText}>Cập nhật</Text>
           </TouchableOpacity>
+          {/* Chuông chỉ hiển thị nếu đã có thời gian */}
+          {item.actualArrivalTime && formatTime(item.actualArrivalTime) !== "00:00" && (
+            <TouchableOpacity
+              style={styles.bellBtn}
+              onPress={() => handleSendNotification(item.id, "actualArrivalTime")}
+              disabled={notifiedFlights[`${item.id}_actualArrivalTime`]}
+            >
+              <MaterialIcons
+                name="notifications-active"
+                size={24}
+                color={notifiedFlights[`${item.id}_actualArrivalTime`] ? "#bdbdbd" : "#28a745"}
+              />
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Cất cánh thực tế tại sân bay đến (nếu turnaround) */}
         <View style={styles.timeRow}>
           <Text style={styles.label}>
-            Cất cánh thực tế tại{" "}
-            {item.arrivalAirport?.airportCode ?? "Chưa xác định"}:
+            Cất cánh thực tế tại {item.arrivalAirport?.airportCode ?? "Chưa xác định"}:
           </Text>
           <Text style={styles.timeValue}>
             {formatTime(item.actualDepartureTimeAtArrival)}
@@ -201,6 +245,20 @@ const updateTime = async () => {
           >
             <Text style={styles.btnText}>Cập nhật</Text>
           </TouchableOpacity>
+          {/* Chuông chỉ hiển thị nếu đã có thời gian */}
+          {item.actualDepartureTimeAtArrival && formatTime(item.actualDepartureTimeAtArrival) !== "00:00" && (
+            <TouchableOpacity
+              style={styles.bellBtn}
+              onPress={() => handleSendNotification(item.id, "actualDepartureTimeAtArrival")}
+              disabled={notifiedFlights[`${item.id}_actualDepartureTimeAtArrival`]}
+            >
+              <MaterialIcons
+                name="notifications-active"
+                size={24}
+                color={notifiedFlights[`${item.id}_actualDepartureTimeAtArrival`] ? "#bdbdbd" : "#28a745"}
+              />
+            </TouchableOpacity>
+          )}
         </View>
 
         {renderLiveTracking(item)}
@@ -250,6 +308,31 @@ const updateTime = async () => {
                 <TouchableOpacity
                   style={styles.cancelBtn}
                   onPress={() => setModalVisible(false)}
+                >
+                  <Text style={styles.btnText}>Hủy</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Modal xác nhận gửi thông báo */}
+        <Modal
+          visible={notifyDialog.visible}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setNotifyDialog({ visible: false, flightId: null, field: "" })}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContainer}>
+              <Text style={styles.modalTitle}>Gửi thông báo cho nhân viên?</Text>
+              <View style={styles.modalButtonRow}>
+                <TouchableOpacity style={styles.saveBtn} onPress={confirmSendNotification}>
+                  <Text style={styles.btnText}>Gửi</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.cancelBtn}
+                  onPress={() => setNotifyDialog({ visible: false, flightId: null, field: "" })}
                 >
                   <Text style={styles.btnText}>Hủy</Text>
                 </TouchableOpacity>
@@ -353,6 +436,23 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   liveBtnText: {
+    color: "#fff",
+    fontWeight: "bold",
+  },
+  bellBtn: {
+    marginLeft: 8,
+    padding: 4,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  notifyBtn: {
+    backgroundColor: "#28a745",
+    marginTop: 10,
+    padding: 10,
+    borderRadius: 6,
+    alignItems: "center",
+  },
+  notifyBtnText: {
     color: "#fff",
     fontWeight: "bold",
   },

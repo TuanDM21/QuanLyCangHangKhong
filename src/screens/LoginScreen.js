@@ -3,30 +3,28 @@ import { View, Text, TextInput, Button, Alert } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import httpApiClient from "../services";
 import * as Notifications from "expo-notifications";
+import { useAuth } from "../context/AuthContext";
 
-const LoginScreen = ({ navigation, setIsLoggedIn }) => {
+const LoginScreen = ({ navigation }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const { setIsLoggedIn } = useAuth();
 
   // Hàm gửi expoPushToken lên backend
   const saveExpoPushTokenToBackend = async (expoPushToken, userToken) => {
     try {
       await httpApiClient.post("users/expo-push-token", {
         headers: { Authorization: `Bearer ${userToken}` },
-        json: expoPushToken, // gửi chuỗi token
+        json: expoPushToken,
       });
     } catch (e) {
-      // Không cần alert, chỉ log nếu cần
       console.log("Lưu expoPushToken thất bại:", e);
     }
   };
 
   const handleLogin = async () => {
     const loginResponse = await httpApiClient.post("auth/login", {
-      json: {
-        email,
-        password,
-      },
+      json: { email, password },
     });
 
     const loginJson = await loginResponse.json();
@@ -55,7 +53,7 @@ const LoginScreen = ({ navigation, setIsLoggedIn }) => {
       }
       await AsyncStorage.setItem("user", JSON.stringify(profileJson.data));
 
-      setIsLoggedIn(true);
+      setIsLoggedIn(true); // Dùng context, không dùng prop
     } else {
       Alert.alert("Đăng nhập thất bại", loginJson.message || "Có lỗi xảy ra");
     }

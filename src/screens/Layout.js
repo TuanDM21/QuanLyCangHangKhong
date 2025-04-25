@@ -3,13 +3,10 @@ import { View, StyleSheet } from "react-native";
 import Header from "./Header";
 import Footer from "./Footer";
 
-const Layout = ({ children, navigation, setIsLoggedIn }) => {
+const Layout = ({ children, navigation }) => {
   return (
     <View style={styles.container}>
-      <Header
-        setIsLoggedIn={setIsLoggedIn || (() => {})}
-        navigation={navigation}
-      />
+      <Header navigation={navigation} />
       <View style={styles.content}>{children}</View>
       <Footer />
     </View>
@@ -22,7 +19,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#cfe2ff",
     paddingHorizontal: 10,
   },
-  // Thêm marginBottom để nội dung không bị che Footer (Footer cao khoảng 60)
   content: {
     flex: 1,
     marginBottom: 60,

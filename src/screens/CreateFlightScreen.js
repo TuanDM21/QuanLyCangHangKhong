@@ -80,7 +80,7 @@ const CreateFlightScreen = () => {
     const arrId = parseInt(selectedArrival, 10);
     const newFlight = {
       flightNumber,
-      departureAirport: depId,
+      departureAirport: { id: depId },
       arrivalAirport: arrId,
       departureTime: formatTime(departureTime),
       arrivalTime: formatTime(arrivalTime),
