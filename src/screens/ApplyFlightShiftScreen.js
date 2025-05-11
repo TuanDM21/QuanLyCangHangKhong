@@ -134,74 +134,79 @@ const ApplyFlightShiftScreen = () => {
     }
   }, [shiftDate]);
 
-  const handleSearchUsers = async () => {
-    if (!selectedTeam) {
-      Alert.alert("Lỗi", "Vui lòng chọn Team!");
-      return;
-    }
-    if (!shiftDate) {
-      Alert.alert("Lỗi", "Vui lòng chọn ngày!");
-      return;
-    }
-    setLoadingUsers(true);
-    try {
-      const formattedDate = shiftDate.toISOString().split("T")[0];
-      let userUrl = `users/filter?teamId=${selectedTeam}`;
-      if (selectedUnit) userUrl += `&unitId=${selectedUnit}`;
-      // Giả sử backend dùng 'shiftDate' cho user-shifts filter
-      let shiftUrl = `user-shifts/filter?shiftDate=${formattedDate}&teamId=${selectedTeam}`;
-      if (selectedUnit) shiftUrl += `&unitId=${selectedUnit}`;
-      console.log("LOG: Fetch userUrl:", userUrl);
-      console.log("LOG: Fetch shiftUrl:", shiftUrl);
-      const { users: dataUsers, shifts: dataUserShifts } = await fetchUserAndShiftData(userUrl, shiftUrl);
-      console.log("LOG: Fetched users:", dataUsers);
-      console.log("LOG: Fetched user shifts:", dataUserShifts);
-      const shiftMap = {};
-      dataUserShifts.forEach((item) => {
-        shiftMap[item.userId] = item.shiftCode;
-      });
-      let mergedUsers = dataUsers.map((u) => ({
-        ...u,
-        assignedShiftCode: shiftMap[u.id] || null,
-        assignedFlight: null,
-      }));
-      if (selectedFlightId) {
-        // Backend GET /shifts yêu cầu tham số "date"
-        const flightShiftUrl = `user-flight-shifts/shifts?flightId=${selectedFlightId}&date=${formattedDate}`;
-        console.log("LOG: Fetch flightShiftUrl:", flightShiftUrl);
-        const resFlightShifts = await httpApiClient.get(flightShiftUrl);
-        if (!resFlightShifts.ok) {
-          const errorJson = await resFlightShifts.json();
-          throw new Error(errorJson.message || "Không thể lấy thông tin ca chuyến bay");
-        }
-        const rawJson = await resFlightShifts.json();
-        console.log("LOG: Raw flight shift JSON:", rawJson);
-        const flightShiftData = rawJson.data;
-        if (!Array.isArray(flightShiftData)) {
-          console.error("flightShiftData is not an array:", flightShiftData);
-          mergedUsers = mergedUsers.map((u) => ({ ...u, assignedFlight: null }));
-        } else {
-          const flightAssignMap = {};
-          flightShiftData.forEach((fs) => {
-            flightAssignMap[fs.userId] = fs;
-          });
-          mergedUsers = mergedUsers.map((u) => ({
-            ...u,
-            assignedFlight: flightAssignMap[u.id] || null,
-          }));
-        }
+// ...existing code...
+const handleSearchUsers = async () => {
+  if (!selectedTeam) {
+    Alert.alert("Lỗi", "Vui lòng chọn Team!");
+    return;
+  }
+  if (!shiftDate) {
+    Alert.alert("Lỗi", "Vui lòng chọn ngày!");
+    return;
+  }
+  setLoadingUsers(true);
+  try {
+    const formattedDate = shiftDate.toISOString().split("T")[0];
+    let userUrl = `users/filter?teamId=${selectedTeam}`;
+    if (selectedUnit) userUrl += `&unitId=${selectedUnit}`;
+    let shiftUrl = `user-shifts/filter?shiftDate=${formattedDate}&teamId=${selectedTeam}`;
+    if (selectedUnit) shiftUrl += `&unitId=${selectedUnit}`;
+    console.log("LOG: Fetch userUrl:", userUrl);
+    console.log("LOG: Fetch shiftUrl:", shiftUrl);
+    const { users: dataUsers, shifts: dataUserShifts } = await fetchUserAndShiftData(userUrl, shiftUrl);
+    console.log("LOG: Fetched users:", dataUsers);
+    console.log("LOG: Fetched user shifts:", dataUserShifts);
+    const shiftMap = {};
+    (Array.isArray(dataUserShifts) ? dataUserShifts : []).forEach((item) => {
+      shiftMap[item.userId] = item.shiftCode;
+    });
+    // Sửa ở đây: kiểm tra dataUsers là mảng hay object có .data
+    let userArray = Array.isArray(dataUsers)
+      ? dataUsers
+      : (dataUsers && Array.isArray(dataUsers.data))
+        ? dataUsers.data
+        : [];
+    let mergedUsers = userArray.map((u) => ({
+      ...u,
+      assignedShiftCode: shiftMap[u.id] || null,
+      assignedFlight: null,
+    }));
+    if (selectedFlightId) {
+      const flightShiftUrl = `user-flight-shifts/shifts?flightId=${selectedFlightId}&date=${formattedDate}`;
+      console.log("LOG: Fetch flightShiftUrl:", flightShiftUrl);
+      const resFlightShifts = await httpApiClient.get(flightShiftUrl);
+      if (!resFlightShifts.ok) {
+        const errorJson = await resFlightShifts.json();
+        throw new Error(errorJson.message || "Không thể lấy thông tin ca chuyến bay");
       }
-      console.log("LOG: Merged Users:", mergedUsers);
-      setUsers(mergedUsers);
-      setSelectedUserIds([]);
-    } catch (error) {
-      console.error("Lỗi khi fetch data:", error);
-      Alert.alert("Lỗi", error.message || "Có lỗi khi kết nối đến server");
-    } finally {
-      setLoadingUsers(false);
+      const rawJson = await resFlightShifts.json();
+      console.log("LOG: Raw flight shift JSON:", rawJson);
+      const flightShiftData = rawJson.data;
+      if (!Array.isArray(flightShiftData)) {
+        console.error("flightShiftData is not an array:", flightShiftData);
+        mergedUsers = mergedUsers.map((u) => ({ ...u, assignedFlight: null }));
+      } else {
+        const flightAssignMap = {};
+        flightShiftData.forEach((fs) => {
+          flightAssignMap[fs.userId] = fs;
+        });
+        mergedUsers = mergedUsers.map((u) => ({
+          ...u,
+          assignedFlight: flightAssignMap[u.id] || null,
+        }));
+      }
     }
-  };
-
+    console.log("LOG: Merged Users:", mergedUsers);
+    setUsers(mergedUsers);
+    setSelectedUserIds([]);
+  } catch (error) {
+    console.error("Lỗi khi fetch data:", error);
+    Alert.alert("Lỗi", error.message || "Có lỗi khi kết nối đến server");
+  } finally {
+    setLoadingUsers(false);
+  }
+};
+// ...existing code...
   useEffect(() => {
     const fetchFlightShiftData = async () => {
       if (shiftDate && selectedFlightId && users.length > 0) {

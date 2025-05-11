@@ -15,104 +15,200 @@ import httpApiClient from "../services";
 
 const ScheduleListScreen = () => {
   const [schedules, setSchedules] = useState([]);
+  const [flightSchedules, setFlightSchedules] = useState([]);
   const [searchText, setSearchText] = useState("");
   const navigation = useNavigation();
 
-  const fetchShifts = async () => {
+  // Fetch cả ca trực và ca chuyến bay
+  const fetchAllSchedules = async () => {
     try {
-      const response = await httpApiClient.get("shifts");
-      const shiftsJson = await response.json();
-      setSchedules(shiftsJson.data);
+      const [shiftsRes, flightsRes] = await Promise.all([
+        httpApiClient.get("shifts"),
+        httpApiClient.get("user-flight-shifts"),
+      ]);
+      const shiftsJson = await shiftsRes.json();
+      const flightsJson = await flightsRes.json();
+
+      // Thêm type để phân biệt
+      const shifts = (shiftsJson.data || []).map((item) => ({
+        ...item,
+        type: "shift",
+      }));
+      const flights = (flightsJson.data || []).map((item) => ({
+        ...item,
+        type: "flight",
+      }));
+
+      setSchedules(shifts);
+      setFlightSchedules(flights);
     } catch (err) {
-      console.error("Error fetching shifts:", err);
+      console.error("Error fetching schedules:", err);
     }
   };
 
-  // Sử dụng useFocusEffect để refresh dữ liệu khi màn hình được focus
   useFocusEffect(
     useCallback(() => {
-      fetchShifts();
+      fetchAllSchedules();
     }, [])
   );
 
-  const handleDelete = (id) => {
-    Alert.alert("Xác nhận xóa", "Bạn có chắc chắn muốn xóa lịch này?", [
-      { text: "Hủy", style: "cancel" },
-      {
-        text: "Xóa",
-        onPress: async () => {
-          try {
-            await httpApiClient.delete(`shifts/${id}`);
-            setSchedules(schedules.filter((item) => item.id !== id));
-          } catch (error) {
-            console.error(error);
-            Alert.alert("Lỗi", "Không thể kết nối đến server");
-          }
+  const handleDelete = async (item) => {
+    if (item.type === "shift") {
+      Alert.alert("Xác nhận xóa", "Bạn có chắc chắn muốn xóa lịch này?", [
+        { text: "Hủy", style: "cancel" },
+        {
+          text: "Xóa",
+          onPress: async () => {
+            try {
+              await httpApiClient.delete(`shifts/${item.id}`);
+              setSchedules((prev) => prev.filter((i) => i.id !== item.id));
+            } catch (error) {
+              console.error(error);
+              Alert.alert("Lỗi", "Không thể kết nối đến server");
+            }
+          },
         },
-      },
-    ]);
+      ]);
+    } else if (item.type === "flight") {
+      Alert.alert("Xác nhận xóa", "Bạn có chắc chắn muốn xóa lịch chuyến bay này?", [
+        { text: "Hủy", style: "cancel" },
+        {
+          text: "Xóa",
+          onPress: async () => {
+            try {
+              await httpApiClient.delete(
+                `user-flight-shifts?flightId=${item.flightId}&shiftDate=${item.shiftDate}&userId=${item.userId}`
+              );
+              setFlightSchedules((prev) =>
+                prev.filter(
+                  (i) =>
+                    !(
+                      i.flightId === item.flightId &&
+                      i.shiftDate === item.shiftDate &&
+                      i.userId === item.userId
+                    )
+                )
+              );
+            } catch (error) {
+              console.error(error);
+              Alert.alert("Lỗi", "Không thể kết nối đến server");
+            }
+          },
+        },
+      ]);
+    }
   };
 
   const handleUpdate = (item) => {
-    navigation.navigate("UpdateSchedule", { schedule: item });
+    if (item.type === "shift") {
+      navigation.navigate("UpdateSchedule", { schedule: item });
+    }
+    // Nếu muốn cập nhật lịch chuyến bay, thêm logic ở đây
   };
 
-  const filteredSchedules = schedules.filter((item) => {
-    const shiftCode = item.shiftCode ? item.shiftCode.toLowerCase() : "";
-    const location = item.location ? item.location.toLowerCase() : "";
-    const description = item.description ? item.description.toLowerCase() : "";
-    const search = searchText.toLowerCase();
+  // Gộp hai loại lịch để tìm kiếm và hiển thị
+  const allSchedules = [...schedules, ...flightSchedules];
 
-    return (
-      shiftCode.includes(search) ||
-      location.includes(search) ||
-      description.includes(search)
-    );
+  const filteredSchedules = allSchedules.filter((item) => {
+    const search = searchText.toLowerCase();
+    if (item.type === "shift") {
+      const shiftCode = item.shiftCode ? item.shiftCode.toLowerCase() : "";
+      const location = item.location ? item.location.toLowerCase() : "";
+      const description = item.description ? item.description.toLowerCase() : "";
+      return (
+        shiftCode.includes(search) ||
+        location.includes(search) ||
+        description.includes(search)
+      );
+    } else if (item.type === "flight") {
+      const flightNumber = item.flightNumber ? item.flightNumber.toLowerCase() : "";
+      const userName = item.userName ? item.userName.toLowerCase() : "";
+      const shiftDate = item.shiftDate ? item.shiftDate.toLowerCase() : "";
+      return (
+        flightNumber.includes(search) ||
+        userName.includes(search) ||
+        shiftDate.includes(search)
+      );
+    }
+    return false;
   });
 
-  const renderItem = ({ item }) => (
-    <View style={styles.card}>
-      <View style={styles.row}>
-        <Ionicons name="calendar-outline" size={24} color="#007AFF" />
-        <Text style={styles.scheduleId}>{item.shiftCode}</Text>
-      </View>
-      <Text style={styles.text}>
-        🕒 {item.startTime} - {item.endTime}
-      </Text>
-      <Text style={styles.text}>📍 {item.location}</Text>
-      <Text style={styles.text}>📝 {item.description}</Text>
-      <View style={styles.buttonContainer}>
-        <TouchableOpacity
-          style={[styles.button, styles.updateButton]}
-          onPress={() => handleUpdate(item)}
-        >
-          <Ionicons name="create-outline" size={20} color="white" />
-          <Text style={styles.buttonText}>Cập nhật</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.button, styles.deleteButton]}
-          onPress={() => handleDelete(item.id)}
-        >
-          <Ionicons name="trash-outline" size={20} color="white" />
-          <Text style={styles.buttonText}>Xóa</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
+  const renderItem = ({ item }) => {
+    if (item.type === "shift") {
+      return (
+        <View style={styles.card}>
+          <View style={styles.row}>
+            <Ionicons name="calendar-outline" size={24} color="#007AFF" />
+            <Text style={styles.scheduleId}>{item.shiftCode}</Text>
+          </View>
+          <Text style={styles.text}>
+            🕒 {item.startTime} - {item.endTime}
+          </Text>
+          <Text style={styles.text}>📍 {item.location}</Text>
+          <Text style={styles.text}>📝 {item.description}</Text>
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity
+              style={[styles.button, styles.updateButton]}
+              onPress={() => handleUpdate(item)}
+            >
+              <Ionicons name="create-outline" size={20} color="white" />
+              <Text style={styles.buttonText}>Cập nhật</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.button, styles.deleteButton]}
+              onPress={() => handleDelete(item)}
+            >
+              <Ionicons name="trash-outline" size={20} color="white" />
+              <Text style={styles.buttonText}>Xóa</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      );
+    } else if (item.type === "flight") {
+      return (
+        <View style={styles.card}>
+          <View style={styles.row}>
+            <Ionicons name="airplane-outline" size={24} color="#FF9500" />
+            <Text style={styles.scheduleId}>{item.flightNumber}</Text>
+          </View>
+          <Text style={styles.text}>👤 {item.userName}</Text>
+          <Text style={styles.text}>🕒 {item.shiftDate}</Text>
+          <Text style={styles.text}>
+            📍 {item.departureAirport?.airportCode} → {item.arrivalAirport?.airportCode}
+          </Text>
+          <View style={styles.buttonContainer}>
+            {/* Nếu muốn cập nhật lịch chuyến bay, thêm nút cập nhật ở đây */}
+            <TouchableOpacity
+              style={[styles.button, styles.deleteButton]}
+              onPress={() => handleDelete(item)}
+            >
+              <Ionicons name="trash-outline" size={20} color="white" />
+              <Text style={styles.buttonText}>Xóa</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      );
+    }
+    return null;
+  };
 
   return (
     <Layout>
       <View style={styles.container}>
-        <Text style={styles.title}>Danh sách lịch trực</Text>
+        <Text style={styles.title}>Danh sách lịch trực & chuyến bay</Text>
         <TextInput
           style={styles.searchInput}
-          placeholder="Tìm kiếm theo ID, vị trí, mô tả..."
+          placeholder="Tìm kiếm theo mã ca, chuyến bay, nhân viên, mô tả..."
           value={searchText}
           onChangeText={setSearchText}
         />
         <FlatList
           data={filteredSchedules}
-          keyExtractor={(item) => item.id.toString()}
+          keyExtractor={(item, idx) =>
+            item.type === "shift"
+              ? `shift-${item.id}`
+              : `flight-${item.flightId}-${item.userId}-${item.shiftDate}-${idx}`
+          }
           renderItem={renderItem}
         />
       </View>
@@ -168,7 +264,7 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    justifyContent: "flex-end",
     marginTop: 10,
   },
   button: {
@@ -176,7 +272,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 8,
     borderRadius: 5,
-    flex: 1,
+    minWidth: 80,
     justifyContent: "center",
   },
   updateButton: {

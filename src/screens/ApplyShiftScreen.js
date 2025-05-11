@@ -135,11 +135,17 @@ const ApplyShiftScreen = () => {
 
       // map userId → shiftCode
       const shiftMap = {};
-      shiftsData.forEach((s) => { shiftMap[s.userId] = s.shiftCode; });
+      (Array.isArray(shiftsData) ? shiftsData : []).forEach((s) => { shiftMap[s.userId] = s.shiftCode; });
 
       // gộp assignedShiftCode & kiểm tra assignedFlight
+      const userArr = Array.isArray(usersData?.data)
+        ? usersData.data
+        : Array.isArray(usersData)
+        ? usersData
+        : [];
+
       const merged = await Promise.all(
-        usersData.map(async (u) => {
+        userArr.map(async (u) => {
           const assignedShiftCode = shiftMap[u.id] || null;
           const assignedFlight = await checkUserAssignment(u.id);
           return { ...u, assignedShiftCode, assignedFlight };

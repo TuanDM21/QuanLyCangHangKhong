@@ -154,15 +154,22 @@ export default function SearchActivityScreen({ navigation }) {
       dots: m[selectedDate]?.dots || [{ color: "#007AFF" }],
     };
     setMarkedDates(m);
-    setActivities(allActivities.filter(a => getVNDateString(a.startTime) === selectedDate));
-  }, [allActivities, selectedDate]);
-
-  // Khi selectedDate đổi ở chế độ tuần thì cập nhật lại weekRange
-  useEffect(() => {
+  
     if (searchType === "week") {
-      setWeekRange(getWeekRange(selectedDate));
+      // Lọc các activity trong tuần
+      const start = weekRange.start;
+      const end = weekRange.end;
+      setActivities(
+        allActivities.filter(a => {
+          const d = getVNDateString(a.startTime);
+          return d >= start && d <= end;
+        })
+      );
+    } else {
+      // Lọc theo ngày
+      setActivities(allActivities.filter(a => getVNDateString(a.startTime) === selectedDate));
     }
-  }, [selectedDate, searchType]);
+  }, [allActivities, selectedDate, searchType, weekRange]);
 
   // Khi đổi sang tuần mới (chọn ngày mới bằng date picker)
   const handleWeekDateChange = date => {

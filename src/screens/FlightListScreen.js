@@ -95,16 +95,23 @@ const confirmSendNotification = async () => {
   // Lấy giá trị actual time từ flights state
   const flight = flights.find(f => f.id === flightId);
   let actualTime = "";
-  if (field === "actualArrivalTime") actualTime = flight?.actualArrivalTime;
-  if (field === "actualDepartureTimeAtArrival") actualTime = flight?.actualDepartureTimeAtArrival;
+  let eventType = "";
+  if (field === "actualArrivalTime") {
+    actualTime = flight?.actualArrivalTime;
+    eventType = "actualArrivalTime";
+  }
+  if (field === "actualDepartureTimeAtArrival") {
+    actualTime = flight?.actualDepartureTimeAtArrival;
+    eventType = "actualDepartureTimeAtArrival";
+  }
   if (!actualTime) {
     Alert.alert("Lỗi", "Chưa có giờ thực tế để gửi thông báo!");
     setNotifyDialog({ visible: false, flightId: null, field: "" });
     return;
   }
   try {
-    // Gửi PATCH với payload đúng field
-    const payload = { [field]: actualTime };
+    // Gửi PATCH với payload đúng field và eventType
+    const payload = { [field]: actualTime, eventType };
     const res = await httpApiClient.patch(
       `flights/${flightId}/actual-time-notify`,
       {

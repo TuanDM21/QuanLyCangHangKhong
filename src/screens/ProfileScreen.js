@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet, Image, ActivityIndicator } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import Layout from "./Layout";
 
 const ProfileScreen = () => {
   const [user, setUser] = useState(null);
@@ -41,15 +42,17 @@ const ProfileScreen = () => {
   }
 
   return (
+    <Layout>
     <View style={styles.container}>
       <View style={styles.card}>
         <Text style={styles.name}>{user.name}</Text>
         <Text style={styles.info}>📧 {user.email}</Text>
         <Text style={styles.info}>🎭 Vai trò: {user.roleName}</Text>
-        <Text style={styles.info}>🛡️ Đội: {user.teamName}</Text>
+        <Text style={ styles.info}>🛡️ Đội: {user.teamName}</Text>
         <Text style={styles.info}>🏢 Tổ: {user.unitName}</Text>
       </View>
     </View>
+    </Layout>
   );
 };
 

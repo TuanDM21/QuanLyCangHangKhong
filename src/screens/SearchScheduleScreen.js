@@ -1,14 +1,12 @@
-// ...
 import React, { useEffect, useState } from "react";
-import { 
-  View, 
-  Text, 
-  TextInput, 
-  Button, 
-  Alert, 
-  FlatList, 
-  StyleSheet, 
-  TouchableOpacity 
+import {
+  View,
+  Text,
+  Button,
+  Alert,
+  FlatList,
+  StyleSheet,
+  TouchableOpacity,
 } from "react-native";
 import { Picker } from "@react-native-picker/picker";
 import Layout from "./Layout";
@@ -25,10 +23,13 @@ const SearchScheduleScreen = () => {
   const [units, setUnits] = useState([]);
   const [selectedUnit, setSelectedUnit] = useState("");
 
+  // Loại lịch trực: "user-shifts" hoặc "user-flight-shifts"
+  const [scheduleType, setScheduleType] = useState("user-shifts");
+
   // State để điều khiển hiển thị DateTimePicker
   const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
 
-  // Kết quả tìm kiếm (ScheduleDTO)
+  // Kết quả tìm kiếm
   const [searchResults, setSearchResults] = useState([]);
 
   const navigation = useNavigation();
@@ -39,7 +40,6 @@ const SearchScheduleScreen = () => {
       try {
         const res = await httpApiClient.get("teams");
         const teamsJson = await res.json();
-        console.log("Fetched teams:", teamsJson);
         setTeams(teamsJson.data);
       } catch (error) {
         console.error("Error fetching teams:", error);
@@ -59,11 +59,9 @@ const SearchScheduleScreen = () => {
         .get(`units?teamId=${selectedTeam}`)
         .json()
         .then((data) => {
-          console.log("Fetched units JSON:", data);
           if (data && Array.isArray(data.data)) {
             setUnits(data.data);
           } else {
-            console.warn("Data units is not an array, got:", data);
             setUnits([]);
           }
         })
@@ -99,52 +97,104 @@ const SearchScheduleScreen = () => {
     hideDatePicker();
   };
 
-  // 3. Hàm handleSearch
+  // Hàm handleSearch
   const handleSearch = async () => {
     if (!shiftDate) {
       Alert.alert("Lỗi", "Vui lòng nhập ngày (YYYY-MM-DD)!");
       return;
     }
     try {
-      let url = `user-shifts/filter?shiftDate=${shiftDate}`;
-      if (selectedTeam) url += `&teamId=${selectedTeam}`;
-      if (selectedUnit) url += `&unitId=${selectedUnit}`;
+      let url = "";
+      if (scheduleType === "user-shifts") {
+        url = `user-shifts/filter?shiftDate=${shiftDate}`;
+        if (selectedTeam) url += `&teamId=${selectedTeam}`;
+        if (selectedUnit) url += `&unitId=${selectedUnit}`;
+      } else {
+        // Đổi endpoint cho user-flight-shifts sang filter-schedules
+        url = `user-flight-shifts/filter-schedules?shiftDate=${shiftDate}`;
+        if (selectedTeam) url += `&teamId=${selectedTeam}`;
+        if (selectedUnit) url += `&unitId=${selectedUnit}`;
+      }
 
-      console.log("Fetch URL:", url);
       const data = await httpApiClient.get(url).json();
-      console.log("Fetched schedules:", data.data);
-      setSearchResults(data.data);
+      setSearchResults(data.data || []);
     } catch (error) {
       console.error("Lỗi khi tìm kiếm:", error);
       Alert.alert("Lỗi", error.message || "Có lỗi khi kết nối đến server");
     }
   };
 
-  // Xử lý Sửa
-  const handleUpdate = (item) => {
-    navigation.navigate("UpdateUserShiftScreen", { schedule: item });
-  };
-
-  // Xử lý Xóa
-  const handleDelete = async (scheduleId) => {
-    Alert.alert("Xác nhận xóa", "Bạn có chắc chắn muốn xóa lịch trực này?", [
-      { text: "Hủy", style: "cancel" },
-      {
-        text: "Xóa",
-        onPress: async () => {
-          try {
-            await httpApiClient.delete(`user-shifts/${scheduleId}`);
-            setSearchResults(searchResults.filter((item) => item.scheduleId !== scheduleId));
-          } catch (error) {
-            console.error("Lỗi khi xóa:", error);
-            Alert.alert("Lỗi", error.message);
-          }
+  // Xử lý Xóa cho cả hai loại lịch trực
+  const handleDelete = async (item) => {
+    const isUserShift = scheduleType === "user-shifts";
+    if (isUserShift) {
+      // Xóa lịch trực theo ca (theo id)
+      const id = item.scheduleId;
+      if (!id || isNaN(Number(id))) {
+        Alert.alert("Lỗi", "ID không hợp lệ!");
+        return;
+      }
+      const endpoint = `user-shifts/${id}`;
+      Alert.alert("Xác nhận xóa", "Bạn có chắc chắn muốn xóa lịch trực này?", [
+        { text: "Hủy", style: "cancel" },
+        {
+          text: "Xóa",
+          onPress: async () => {
+            try {
+              await httpApiClient.delete(endpoint);
+              setSearchResults(searchResults.filter((i) => Number(i.scheduleId) !== Number(id)));
+            } catch (error) {
+              console.error("Lỗi khi xóa:", error);
+              Alert.alert("Lỗi", error.message);
+            }
+          },
         },
-      },
-    ]);
+      ]);
+    } else {
+      // Xóa lịch trực chuyến bay (theo bộ 3)
+      // Kiểm tra kỹ tên trường, có thể là flightId, shiftDate, userId hoặc viết hoa/thường khác
+      const flightId = item.flightId || item.flightID || item.FlightId;
+      const shiftDateVal = item.shiftDate || item.shift_date || item.ShiftDate;
+      const userId = item.userId || item.userID || item.UserId;
+      if (!flightId || !shiftDateVal || !userId) {
+        console.log("Item khi xóa:", item); // debug
+        Alert.alert("Lỗi", "Thiếu thông tin để xóa!");
+        return;
+      }
+      const endpoint = `user-flight-shifts?flightId=${flightId}&shiftDate=${shiftDateVal}&userId=${userId}`;
+      Alert.alert("Xác nhận xóa", "Bạn có chắc chắn muốn xóa lịch trực này?", [
+        { text: "Hủy", style: "cancel" },
+        {
+          text: "Xóa",
+          onPress: async () => {
+            try {
+              await httpApiClient.delete(endpoint);
+              setSearchResults(searchResults.filter(
+                (i) => !(
+                  (i.flightId || i.flightID || i.FlightId) === flightId &&
+                  (i.shiftDate || i.shift_date || i.ShiftDate) === shiftDateVal &&
+                  (i.userId || i.userID || i.UserId) === userId
+                )
+              ));
+            } catch (error) {
+              console.error("Lỗi khi xóa:", error);
+              Alert.alert("Lỗi", error.message);
+            }
+          },
+        },
+      ]);
+    }
+  };
+  // Xử lý Sửa cho cả hai loại lịch trực
+  const handleUpdate = (item) => {
+    if (scheduleType === "user-shifts") {
+      navigation.navigate("UpdateUserShiftScreen", { schedule: item });
+    } else {
+      navigation.navigate("UpdateUserFlightShiftScreen", { schedule: item });
+    }
   };
 
-  // Render item
+  // Render item cho từng loại lịch trực
   const renderItem = ({ item }) => (
     <View style={styles.resultCard}>
       <Text style={styles.resultText}>
@@ -163,25 +213,51 @@ const SearchScheduleScreen = () => {
         <Text style={styles.label}>Ngày: </Text>
         {item.shiftDate || "N/A"}
       </Text>
-      <Text style={styles.resultText}>
-        <Text style={styles.label}>Ca: </Text>
-        {item.shiftCode || "N/A"}
-      </Text>
-      <Text style={styles.resultText}>
-        <Text style={styles.label}>Thời gian: </Text>
-        {item.startTime && item.endTime
-          ? `${item.startTime} - ${item.endTime}`
-          : "N/A"}
-      </Text>
-      <Text style={styles.resultText}>
-        <Text style={styles.label}>Vị trí: </Text>
-        {item.location || "N/A"}
-      </Text>
-      <Text style={styles.resultText}>
-        <Text style={styles.label}>Mô tả: </Text>
-        {item.description || "N/A"}
-      </Text>
-
+      {scheduleType === "user-shifts" ? (
+        <>
+          <Text style={styles.resultText}>
+            <Text style={styles.label}>Ca: </Text>
+            {item.shiftCode || "N/A"}
+          </Text>
+          <Text style={styles.resultText}>
+            <Text style={styles.label}>Thời gian: </Text>
+            {item.startTime && item.endTime
+              ? `${item.startTime} - ${item.endTime}`
+              : "N/A"}
+          </Text>
+          <Text style={styles.resultText}>
+            <Text style={styles.label}>Vị trí: </Text>
+            {item.location || "N/A"}
+          </Text>
+          <Text style={styles.resultText}>
+            <Text style={styles.label}>Mô tả: </Text>
+            {item.description || "N/A"}
+          </Text>
+        </>
+      ) : (
+        <>
+          <Text style={styles.resultText}>
+            <Text style={styles.label}>Chuyến bay: </Text>
+            {item.flightNumber || "N/A"}
+          </Text>
+          <Text style={styles.resultText}>
+            <Text style={styles.label}>Sân bay đi: </Text>
+            {item.departureAirportCode || "N/A"}
+          </Text>
+          <Text style={styles.resultText}>
+            <Text style={styles.label}>Sân bay đến: </Text>
+            {item.arrivalAirportCode || "N/A"}
+          </Text>
+          <Text style={styles.resultText}>
+            <Text style={styles.label}>Giờ cất cánh: </Text>
+            {item.departureTime || "N/A"}
+          </Text>
+          <Text style={styles.resultText}>
+            <Text style={styles.label}>Giờ hạ cánh: </Text>
+            {item.arrivalTime || "N/A"}
+          </Text>
+        </>
+      )}
       <View style={styles.actionContainer}>
         <TouchableOpacity
           style={[styles.actionButton, { backgroundColor: "#007AFF" }]}
@@ -190,10 +266,9 @@ const SearchScheduleScreen = () => {
           <Ionicons name="create-outline" size={20} color="white" />
           <Text style={styles.actionButtonText}>Sửa</Text>
         </TouchableOpacity>
-
         <TouchableOpacity
           style={[styles.actionButton, { backgroundColor: "#FF3B30", marginTop: 8 }]}
-          onPress={() => handleDelete(item.scheduleId)}
+          onPress={() => handleDelete(item)}
         >
           <Ionicons name="trash-outline" size={20} color="white" />
           <Text style={styles.actionButtonText}>Xóa</Text>
@@ -204,10 +279,9 @@ const SearchScheduleScreen = () => {
 
   return (
     <Layout>
-      {/* DateTimePickerModal - đặt ngay trong component để dễ điều khiển */}
       <DateTimePickerModal
         isVisible={isDatePickerVisible}
-        mode="date" // có thể 'date', 'time', hoặc 'datetime'
+        mode="date"
         onConfirm={handleConfirmDate}
         onCancel={hideDatePicker}
       />
@@ -215,21 +289,36 @@ const SearchScheduleScreen = () => {
       <FlatList
         data={searchResults}
         keyExtractor={(item, index) =>
-          item.scheduleId ? item.scheduleId.toString() : index.toString()
+          item.scheduleId
+            ? item.scheduleId.toString()
+            : item.id
+            ? item.id.toString()
+            : index.toString()
         }
         renderItem={renderItem}
         ListHeaderComponent={
           <View style={styles.headerContainer}>
             <Text style={styles.title}>Tìm kiếm lịch trực</Text>
 
-            {/* TextInput này thay vì cho gõ tay, ta cho onFocus mở picker, hoặc làm Button riêng */}
+            {/* Chọn loại lịch trực */}
+            <Text style={styles.label}>Loại lịch trực:</Text>
+            <View style={styles.pickerContainer}>
+              <Picker
+                selectedValue={scheduleType}
+                onValueChange={(value) => setScheduleType(value)}
+              >
+                <Picker.Item label="Lịch trực theo ca" value="user-shifts" />
+                <Picker.Item label="Lịch trực chuyến bay" value="user-flight-shifts" />
+              </Picker>
+            </View>
+
             <TouchableOpacity onPress={showDatePicker} activeOpacity={1}>
-  <View style={styles.input}>
-    <Text style={{ color: shiftDate ? "#222" : "#aaa" }}>
-      {shiftDate || "Nhập ngày (YYYY-MM-DD)"}
-    </Text>
-  </View>
-</TouchableOpacity>
+              <View style={styles.input}>
+                <Text style={{ color: shiftDate ? "#222" : "#aaa" }}>
+                  {shiftDate || "Nhập ngày (YYYY-MM-DD)"}
+                </Text>
+              </View>
+            </TouchableOpacity>
 
             <Text style={styles.label}>Chọn Team (ID):</Text>
             <View style={styles.pickerContainer}>
@@ -324,7 +413,7 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     margin: 10,
     position: "relative",
-    paddingRight: 80,
+    paddingRight: 20,
   },
   resultText: {
     fontSize: 14,

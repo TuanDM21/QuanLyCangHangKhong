@@ -81,7 +81,7 @@ const CreateFlightScreen = () => {
     const newFlight = {
       flightNumber,
       departureAirport: { id: depId },
-      arrivalAirport: arrId,
+      arrivalAirport: { id: arrId },
       departureTime: formatTime(departureTime),
       arrivalTime: formatTime(arrivalTime),
       flightDate: formatDate(flightDate),

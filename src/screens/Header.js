@@ -14,7 +14,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { useAuth } from "../context/AuthContext";
 
-const BACKEND_URL = "http://192.168.13.74:8080";
+const BACKEND_URL = "http://192.168.1.10:8080";
 // const BACKEND_URL = "http://10.0.2.2:8080";
 // const BACKEND_URL = "http://192.168.1.5:8080";
 
