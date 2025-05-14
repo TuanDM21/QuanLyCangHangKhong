@@ -9,7 +9,7 @@ const FlightScreen = () => {
 
   return (
     <Layout>
-      <View style={styles.container}>
+      <View style={[styles.container, { flex: 1 }]}>
         <Text style={styles.title}>Chuyến bay</Text>
         
         <View style={styles.menu}>
@@ -38,6 +38,15 @@ const FlightScreen = () => {
           >
             <Ionicons name="search-outline" size={40} color="white" />
             <Text style={styles.menuText}>Tìm kiếm</Text>
+          </TouchableOpacity>
+
+          {/* Bản đồ Live Tracking */}
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => navigation.navigate("LiveTrackingMapScreen")}
+          >
+            <Ionicons name="locate-outline" size={40} color="white" />
+            <Text style={styles.menuText}>Bản đồ Live Tracking</Text>
           </TouchableOpacity>
 
           {/* Nếu cần 4 nút thì mở lại Tracking */}

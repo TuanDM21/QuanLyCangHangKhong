@@ -27,7 +27,7 @@ const NotificationScreen = () => {
         keyExtractor={(item) => item.id.toString()}
         renderItem={({ item }) => (
           <TouchableOpacity
-            style={[styles.item, item.read && styles.read]}
+            style={[styles.item, item.read && styles.read, { borderRadius: 8, marginBottom: 8, backgroundColor: item.read ? '#f0f0f0' : '#fff', shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 2, elevation: 1 }]}
             onPress={() => handleRead(item.id)}
           >
             <Text style={styles.title}>{item.title}</Text>

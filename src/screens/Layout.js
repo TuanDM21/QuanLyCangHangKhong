@@ -7,7 +7,9 @@ const Layout = ({ children, navigation }) => {
   return (
     <View style={styles.container}>
       <Header navigation={navigation} />
-      <View style={styles.content}>{children}</View>
+      <View style={styles.content}>
+        {children}
+      </View>
       <Footer />
     </View>
   );

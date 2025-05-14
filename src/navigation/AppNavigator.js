@@ -27,6 +27,7 @@ import EditActivityScreen from "../screens/Activity/EditActivityScreen";
 import MyActivitiesScreen from "../screens/Activity/MyActivitiesScreen";
 import NotificationScreen from "../screens/NotificationScreen";
 import UpdateUserFlightShiftScreen from "../screens/UpdateUserFlightShiftScreen";
+import LiveTrackingMapScreen from "../screens/LiveTrackingMapScreen";
 
 const Stack = createStackNavigator();
 
@@ -65,6 +66,9 @@ const AppNavigator = () => {
             <Stack.Screen name="MyActivitiesScreen" component={MyActivitiesScreen} />
             <Stack.Screen name="NotificationScreen" component={NotificationScreen} />
             <Stack.Screen name="UpdateUserFlightShiftScreen" component={UpdateUserFlightShiftScreen} />
+            <Stack.Screen name="LiveTrackingMapScreen" component={LiveTrackingMapScreen} />
+
+            
           </>
         )}
       </Stack.Navigator>

@@ -9,6 +9,7 @@ import {
   Alert,
   Modal,
   TextInput,
+  Animated,
 } from "react-native";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
@@ -30,9 +31,27 @@ const FlightListScreen = () => {
   const [notifiedFlights, setNotifiedFlights] = useState({});
   const [notifyDialog, setNotifyDialog] = useState({ visible: false, flightId: null, field: "" });
 
+  // Animated value cho hiệu ứng nhấp nháy LIVE
+  const liveAnim = React.useRef(new Animated.Value(1)).current;
+
   useEffect(() => {
     fetchFlights();
-  }, []);
+    // Lặp animation nhấp nháy
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(liveAnim, {
+          toValue: 0.2,
+          duration: 1000, // 1 giây nhấp nháy
+          useNativeDriver: true,
+        }),
+        Animated.timing(liveAnim, {
+          toValue: 1,
+          duration: 1000, // 1 giây nhấp nháy
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+  }, [liveAnim]);
 
   // Lấy danh sách chuyến bay từ endpoint today
   const fetchFlights = async () => {
@@ -89,7 +108,6 @@ const FlightListScreen = () => {
   };
 
   // Xác nhận gửi thông báo
-// Xác nhận gửi thông báo
 const confirmSendNotification = async () => {
   const { flightId, field } = notifyDialog;
   // Lấy giá trị actual time từ flights state
@@ -142,133 +160,102 @@ const confirmSendNotification = async () => {
     return timeStr.length >= 5 ? timeStr.substring(0, 5) : timeStr;
   };
 
-  // Live Tracking (nếu actualDepartureTime khác null)
-  const renderLiveTracking = (flight) => {
-    if (
+  // Live Tracking (nếu actualDepartureTime khác null và chưa có actualDepartureTimeAtArrival)
+  const isLiveTracking = (flight) => {
+    return (
       flight.actualDepartureTime &&
-      formatTime(flight.actualDepartureTime) !== "00:00"
-    ) {
-      return (
-        <TouchableOpacity
-          style={styles.liveBtn}
-          onPress={() =>
-            navigation.navigate("LiveTrackingScreen", { flight: flight })
-          }
-        >
-          <Text style={styles.liveBtnText}>Live Tracking</Text>
-        </TouchableOpacity>
-      );
-    }
-    return null;
+      formatTime(flight.actualDepartureTime) !== "00:00" &&
+      !flight.actualDepartureTimeAtArrival
+    );
   };
+
+  // Render badge LIVE nhấp nháy
+  const renderLiveBadge = () => (
+    <Animated.View style={[styles.liveBadgeAnimated, { opacity: liveAnim }]}> 
+      <Ionicons name="radio" size={16} color="#fff" style={{marginRight: 4}} />
+      <Text style={styles.liveBadgeText}>LIVE</Text>
+    </Animated.View>
+  );
 
   // Render từng item chuyến bay
   const renderFlightItem = ({ item }) => {
+    const live = isLiveTracking(item);
     return (
-      <View style={styles.card}>
-        {/* Header */}
+      <View style={[styles.card, live && styles.cardLive]}> 
         <View style={styles.headerRow}>
-          <Ionicons name="airplane-outline" size={24} color="#007AFF" />
+          <Ionicons name="airplane" size={28} color="#007AFF" style={{marginRight: 8}} />
           <Text style={styles.flightNumber}>{item.flightNumber}</Text>
+          {live && (
+            <View style={styles.liveBadgeWrapper}>
+              {renderLiveBadge()}
+            </View>
+          )}
         </View>
-
-        <Text style={styles.infoText}>Ngày bay: {item.flightDate || ""}</Text>
-
-        {/* Hiển thị mã sân bay (không render object) */}
-        <Text style={styles.infoText}>
-          {item.departureAirport?.airportCode ?? "Chưa xác định"}
-          {" → "}
-          {item.arrivalAirport?.airportCode ?? "Chưa xác định"}
-        </Text>
-
-        {/* Thời gian kế hoạch */}
+        {/* Calendar và chuyến bay: mỗi dòng 1 thông tin, icon và chữ cùng dòng */}
+        <View style={styles.infoRowInline}>
+          <Ionicons name="calendar" size={18} color="#888" style={{marginRight: 4}} />
+          <Text style={styles.infoText}>{item.flightDate ? `${item.flightDate}` : ""}</Text>
+        </View>
+        <View style={styles.infoRowInline}>
+          <Ionicons name="airplane-outline" size={20} color="#007AFF" style={{marginRight: 4}} />
+          <Text style={styles.airportText}>{item.departureAirport?.airportCode || "---"}</Text>
+          <Ionicons name="arrow-forward" size={18} color="#FF3B30" style={{marginHorizontal: 6}} />
+          <Ionicons name="airplane" size={20} color="#28a745" style={{marginRight: 4}} />
+          <Text style={styles.airportText}>{item.arrivalAirport?.airportCode || "---"}</Text>
+        </View>
         <View style={styles.planRow}>
+          <Ionicons name="time" size={18} color="#D2691E" style={{marginRight: 4}} />
           <Text style={styles.planLabel}>Kế hoạch:</Text>
           <Text style={styles.planTime}>
             {formatTime(item.departureTime)} - {formatTime(item.arrivalTime)}
           </Text>
         </View>
-
-        {/* Cất cánh thực tế tại sân bay đi */}
         <View style={styles.timeRow}>
+          <Ionicons name="airplane-outline" size={18} color="#007AFF" style={{marginRight: 4}} />
           <Text style={styles.label}>
             Cất cánh thực tế tại {item.departureAirport?.airportCode ?? "Chưa xác định"}:
           </Text>
-          <Text style={styles.timeValue}>
-            {formatTime(item.actualDepartureTime)}
-          </Text>
-          <TouchableOpacity
-            style={styles.updateBtn}
-            onPress={() => handleOpenModal(item.id, "actualDepartureTime")}
-          >
-            <Text style={styles.btnText}>Cập nhật</Text>
+          <Text style={styles.timeValue}>{formatTime(item.actualDepartureTime)}</Text>
+          <TouchableOpacity style={styles.updateBtn} onPress={() => handleOpenModal(item.id, "actualDepartureTime")}> 
+            <Ionicons name="create-outline" size={18} color="#fff" />
           </TouchableOpacity>
-          {/* KHÔNG hiển thị chuông ở dòng này */}
         </View>
-
-        {/* Hạ cánh thực tế tại sân bay đến */}
         <View style={styles.timeRow}>
+          <Ionicons name="airplane" size={18} color="#28a745" style={{marginRight: 4}} />
           <Text style={styles.label}>
             Hạ cánh thực tế tại {item.arrivalAirport?.airportCode ?? "Chưa xác định"}:
           </Text>
-          <Text style={styles.timeValue}>
-            {formatTime(item.actualArrivalTime)}
-          </Text>
-          <TouchableOpacity
-            style={styles.updateBtn}
-            onPress={() => handleOpenModal(item.id, "actualArrivalTime")}
-          >
-            <Text style={styles.btnText}>Cập nhật</Text>
+          <Text style={styles.timeValue}>{formatTime(item.actualArrivalTime)}</Text>
+          <TouchableOpacity style={styles.updateBtn} onPress={() => handleOpenModal(item.id, "actualArrivalTime")}> 
+            <Ionicons name="create-outline" size={18} color="#fff" />
           </TouchableOpacity>
-          {/* Chuông chỉ hiển thị nếu đã có thời gian */}
           {item.actualArrivalTime && formatTime(item.actualArrivalTime) !== "00:00" && (
-            <TouchableOpacity
-              style={styles.bellBtn}
-              onPress={() => handleSendNotification(item.id, "actualArrivalTime")}
-              disabled={notifiedFlights[`${item.id}_actualArrivalTime`]}
-            >
-              <MaterialIcons
-                name="notifications-active"
-                size={24}
-                color={notifiedFlights[`${item.id}_actualArrivalTime`] ? "#bdbdbd" : "#28a745"}
-              />
+            <TouchableOpacity style={styles.bellBtn} onPress={() => handleSendNotification(item.id, "actualArrivalTime")} disabled={notifiedFlights[`${item.id}_actualArrivalTime`]}> 
+              <MaterialIcons name="notifications-active" size={24} color={notifiedFlights[`${item.id}_actualArrivalTime`] ? "#bdbdbd" : "#28a745"} />
             </TouchableOpacity>
           )}
         </View>
-
-        {/* Cất cánh thực tế tại sân bay đến (nếu turnaround) */}
         <View style={styles.timeRow}>
+          <Ionicons name="airplane" size={18} color="#FF3B30" style={{marginRight: 4}} />
           <Text style={styles.label}>
             Cất cánh thực tế tại {item.arrivalAirport?.airportCode ?? "Chưa xác định"}:
           </Text>
-          <Text style={styles.timeValue}>
-            {formatTime(item.actualDepartureTimeAtArrival)}
-          </Text>
-          <TouchableOpacity
-            style={styles.updateBtn}
-            onPress={() =>
-              handleOpenModal(item.id, "actualDepartureTimeAtArrival")
-            }
-          >
-            <Text style={styles.btnText}>Cập nhật</Text>
+          <Text style={styles.timeValue}>{formatTime(item.actualDepartureTimeAtArrival)}</Text>
+          <TouchableOpacity style={styles.updateBtn} onPress={() => handleOpenModal(item.id, "actualDepartureTimeAtArrival")}> 
+            <Ionicons name="create-outline" size={18} color="#fff" />
           </TouchableOpacity>
-          {/* Chuông chỉ hiển thị nếu đã có thời gian */}
           {item.actualDepartureTimeAtArrival && formatTime(item.actualDepartureTimeAtArrival) !== "00:00" && (
-            <TouchableOpacity
-              style={styles.bellBtn}
-              onPress={() => handleSendNotification(item.id, "actualDepartureTimeAtArrival")}
-              disabled={notifiedFlights[`${item.id}_actualDepartureTimeAtArrival`]}
-            >
-              <MaterialIcons
-                name="notifications-active"
-                size={24}
-                color={notifiedFlights[`${item.id}_actualDepartureTimeAtArrival`] ? "#bdbdbd" : "#28a745"}
-              />
+            <TouchableOpacity style={styles.bellBtn} onPress={() => handleSendNotification(item.id, "actualDepartureTimeAtArrival")} disabled={notifiedFlights[`${item.id}_actualDepartureTimeAtArrival`]}> 
+              <MaterialIcons name="notifications-active" size={24} color={notifiedFlights[`${item.id}_actualDepartureTimeAtArrival`] ? "#bdbdbd" : "#28a745"} />
             </TouchableOpacity>
           )}
         </View>
-
-        {renderLiveTracking(item)}
+        {live && (
+          <TouchableOpacity style={styles.liveBtnModern} onPress={() => navigation.navigate("LiveTrackingScreen", { flight: item })}>
+            <Ionicons name="locate" size={18} color="#fff" style={{marginRight: 6}} />
+            <Text style={styles.liveBtnText}>Xem Live Tracking</Text>
+          </TouchableOpacity>
+        )}
       </View>
     );
   };
@@ -277,6 +264,20 @@ const confirmSendNotification = async () => {
     <Layout>
       <View style={styles.container}>
         <Text style={styles.title}>Danh Sách Chuyến Bay</Text>
+        <Text style={{textAlign: 'center', fontWeight: 'bold', color: '#007AFF', marginBottom: 2}}>
+          Tổng số chuyến bay: {flights.length}
+        </Text>
+        <Text style={{textAlign: 'center', color: '#FF9500', fontWeight: '600', fontSize: 16, marginBottom: 8}}>
+          {(() => {
+            const now = new Date();
+            const weekdays = ['Chủ nhật', 'Thứ hai', 'Thứ ba', 'Thứ tư', 'Thứ năm', 'Thứ sáu', 'Thứ bảy'];
+            const day = now.getDate().toString().padStart(2, '0');
+            const month = (now.getMonth() + 1).toString().padStart(2, '0');
+            const year = now.getFullYear();
+            const weekday = weekdays[now.getDay()];
+            return `${weekday}, ngày ${day}/${month}/${year}`;
+          })()}
+        </Text>
         {loading ? (
           <ActivityIndicator
             color="#007AFF"
@@ -369,10 +370,21 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: "#fff",
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 12,
-    elevation: 2,
+    borderRadius: 14,
+    padding: 16,
+    marginBottom: 16,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    borderWidth: 1,
+    borderColor: '#e3e3e3',
+    position: 'relative',
+  },
+  cardLive: {
+    borderColor: '#FF3B30',
+    backgroundColor: '#FFF5F5',
   },
   headerRow: {
     flexDirection: "row",
@@ -384,6 +396,22 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "bold",
     color: "#007AFF",
+  },
+  liveBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FF3B30',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    marginLeft: 10,
+    height: 22,
+  },
+  liveBadgeText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 12,
+    letterSpacing: 1,
   },
   infoText: {
     fontSize: 15,
@@ -425,11 +453,13 @@ const styles = StyleSheet.create({
     color: "#8B0000",
   },
   updateBtn: {
-    backgroundColor: "#FFA500",
+    backgroundColor: "#007AFF",
     borderRadius: 6,
     paddingHorizontal: 10,
     paddingVertical: 6,
     marginLeft: 5,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   btnText: {
     color: "#fff",
@@ -445,6 +475,19 @@ const styles = StyleSheet.create({
   liveBtnText: {
     color: "#fff",
     fontWeight: "bold",
+  },
+  liveBtnModern: {
+    backgroundColor: '#FF3B30',
+    marginTop: 12,
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    shadowColor: '#FF3B30',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 6,
   },
   bellBtn: {
     marginLeft: 8,
@@ -503,5 +546,44 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     paddingVertical: 8,
     borderRadius: 6,
+  },
+  liveBadgeWrapper: {
+    // Để nhấp nháy
+    marginLeft: 10,
+    height: 22,
+    justifyContent: 'center',
+  },
+  '@keyframes blink': {
+    '0%': { opacity: 1 },
+    '50%': { opacity: 0.2 },
+    '100%': { opacity: 1 },
+  },
+  liveBadgeAnimated: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FF3B30',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    height: 22,
+    // Nhấp nháy bằng cách dùng animation (sẽ dùng Animated.View ở dưới)
+  },
+  infoRowHorizontal: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 2,
+  },
+  infoRowInline: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  airportText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#22223b',
+    letterSpacing: 1.2,
+    marginRight: 2,
   },
 });

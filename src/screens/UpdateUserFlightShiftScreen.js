@@ -12,6 +12,7 @@ import Layout from "./Layout";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import httpApiClient from "../services";
 import { useNavigation, useRoute } from "@react-navigation/native";
+import SelectModal from "../components/SelectModal";
 
 const UpdateUserFlightShiftScreen = () => {
   const navigation = useNavigation();
@@ -132,22 +133,13 @@ const UpdateUserFlightShiftScreen = () => {
         />
 
         <Text style={styles.label}>Chọn chuyến bay:</Text>
-        <View style={styles.pickerContainer}>
-          <Picker
-            selectedValue={selectedFlightId}
-            onValueChange={(value) => setSelectedFlightId(value)}
-            enabled={flights.length > 0}
-          >
-            <Picker.Item label="(Chọn chuyến bay)" value="" />
-            {flights.map((flight) => (
-              <Picker.Item
-                key={flight.id}
-                label={`${flight.flightNumber} (${flight.departureAirport?.airportCode} → ${flight.arrivalAirport?.airportCode})`}
-                value={flight.id.toString()}
-              />
-            ))}
-          </Picker>
-        </View>
+        <SelectModal
+          data={flights.map(f => ({ label: `${f.flightNumber} (${f.departureAirport?.airportCode} → ${f.arrivalAirport?.airportCode})`, value: f.id?.toString() }))}
+          value={selectedFlightId}
+          onChange={setSelectedFlightId}
+          placeholder="Chọn chuyến bay"
+          title="Chọn chuyến bay"
+        />
 
         {flightInfo && (
           <View style={styles.flightInfo}>

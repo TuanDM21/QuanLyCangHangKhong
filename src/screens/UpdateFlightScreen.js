@@ -16,6 +16,7 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import Layout from "./Layout";
 import httpApiClient from "../services";
+import SelectModal from "../components/SelectModal";
 
 const UpdateFlightScreen = () => {
   const navigation = useNavigation();
@@ -173,21 +174,13 @@ const UpdateFlightScreen = () => {
           {loadingAirports ? (
             <ActivityIndicator size="small" color="#007AFF" />
           ) : (
-            <View style={styles.pickerContainer}>
-              <Picker
-                selectedValue={selectedDeparture}
-                onValueChange={setSelectedDeparture}
-              >
-                <Picker.Item label="Chọn…" value="" />
-                {airports.map((a) => (
-                  <Picker.Item
-                    key={a.id}
-                    label={`${a.airportCode} - ${a.airportName}`}
-                    value={a.airportCode}
-                  />
-                ))}
-              </Picker>
-            </View>
+            <SelectModal
+              data={airports.map(a => ({ label: `${a.airportCode} - ${a.airportName}`, value: a.airportCode }))}
+              value={selectedDeparture}
+              onChange={setSelectedDeparture}
+              placeholder="Chọn sân bay khởi hành"
+              title="Chọn sân bay khởi hành"
+            />
           )}
 
           {/* Arrival airport */}
@@ -195,21 +188,13 @@ const UpdateFlightScreen = () => {
           {loadingAirports ? (
             <ActivityIndicator size="small" color="#007AFF" />
           ) : (
-            <View style={styles.pickerContainer}>
-              <Picker
-                selectedValue={selectedArrival}
-                onValueChange={setSelectedArrival}
-              >
-                <Picker.Item label="Chọn…" value="" />
-                {airports.map((a) => (
-                  <Picker.Item
-                    key={a.id}
-                    label={`${a.airportCode} - ${a.airportName}`}
-                    value={a.airportCode}
-                  />
-                ))}
-              </Picker>
-            </View>
+            <SelectModal
+              data={airports.map(a => ({ label: `${a.airportCode} - ${a.airportName}`, value: a.airportCode }))}
+              value={selectedArrival}
+              onChange={setSelectedArrival}
+              placeholder="Chọn sân bay hạ cánh"
+              title="Chọn sân bay hạ cánh"
+            />
           )}
 
           {/* Departure time */}

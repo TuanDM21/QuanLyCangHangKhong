@@ -15,6 +15,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import httpApiClient from "../services";
+import SelectModal from "../components/SelectModal";
 
 const ApplyFlightShiftScreen = () => {
   const navigation = useNavigation();
@@ -305,80 +306,56 @@ const handleSearchUsers = async () => {
     }
   };
 
-  const renderUserItem = ({ item }) => {
-    const isSelected = selectedUserIds.includes(item.id);
-    let displayName = item.name;
-    if (item.assignedFlight) {
-      displayName += ` [Đã phục vụ chuyến bay ${item.assignedFlight.flightNumber}]`;
-    } else if (item.assignedShiftCode) {
-      displayName += ` [Ca trực: ${item.assignedShiftCode}]`;
-    }
-    const isDisabled = !!item.assignedShiftCode || !!item.assignedFlight;
+  // SelectModal cho chọn chuyến bay
+  const FlightSelectModal = () => (
+    <SelectModal
+      label="Chọn chuyến bay"
+      data={flights.map(fl => ({ label: `${fl.flightNumber} (${fl.departureAirport.airportCode} → ${fl.arrivalAirport.airportCode})`, value: fl.id.toString() }))}
+      value={selectedFlightId}
+      onChange={setSelectedFlightId}
+      placeholder="Chọn chuyến bay"
+      title="Chọn chuyến bay"
+      disabled={flights.length === 0}
+    />
+  );
+
+  // SelectModal cho chọn nhân viên (multi-select, disable nếu đã có ca hoặc đã phục vụ chuyến bay)
+  const UserSelectModal = () => {
+    const disabledUserIds = users.filter(u => u.assignedFlight || u.assignedShiftCode).map(u => u.id);
     return (
-      <View style={styles.userItem}>
-        <TouchableOpacity
-          style={[
-            { flex: 1 },
-            isSelected && styles.selectedUserItem,
-            (item.assignedFlight || item.assignedShiftCode) && styles.assignedUserItem,
-          ]}
-          onPress={() => {
-            if (!item.assignedShiftCode && !item.assignedFlight) {
-              toggleUserSelection(item.id);
-            }
-          }}
-          disabled={isDisabled}
-        >
-          <Text style={styles.userName}>{displayName}</Text>
-          {isSelected && (
-            <Ionicons name="checkmark-circle" size={24} color="green" />
-          )}
-        </TouchableOpacity>
-        {item.assignedFlight && (
-          <TouchableOpacity onPress={() => handleRemoveAssignment(item.id)}>
-            <Ionicons name="close-circle" size={24} color="red" />
-          </TouchableOpacity>
-        )}
-      </View>
+      <SelectModal
+        label="Chọn nhân viên"
+        data={users.map(u => ({ label: u.name + (u.assignedFlight ? ` [Đã phục vụ chuyến bay${u.assignedFlight.flightNumber ? ' ' + u.assignedFlight.flightNumber : ''}]` : u.assignedShiftCode ? ` [Ca trực: ${u.assignedShiftCode}]` : ''), value: u.id }))}
+        multi
+        selectedValues={selectedUserIds}
+        onChange={setSelectedUserIds}
+        placeholder="Chọn nhân viên"
+        title="Chọn nhân viên"
+        disabledValues={disabledUserIds}
+      />
     );
   };
 
   const ListHeader = () => (
     <View style={styles.headerContainer}>
       <Text style={styles.title}>Áp dụng ca theo chuyến bay</Text>
-      <Text style={styles.label}>Chọn Team:</Text>
-      <View style={styles.pickerContainer}>
-        <Picker
-          selectedValue={selectedTeam}
-          onValueChange={(value) => setSelectedTeam(value)}
-        >
-          <Picker.Item label="(Chọn Team)" value="" />
-          {teams.map((team) => (
-            <Picker.Item
-              key={team.id}
-              label={team.teamName}
-              value={team.id.toString()}
-            />
-          ))}
-        </Picker>
-      </View>
-      <Text style={styles.label}>Chọn Unit:</Text>
-      <View style={styles.pickerContainer}>
-        <Picker
-          selectedValue={selectedUnit}
-          onValueChange={(value) => setSelectedUnit(value)}
-          enabled={!!selectedTeam}
-        >
-          <Picker.Item label="(Chọn Unit)" value="" />
-          {units.map((unit) => (
-            <Picker.Item
-              key={unit.id}
-              label={unit.unitName}
-              value={unit.id.toString()}
-            />
-          ))}
-        </Picker>
-      </View>
+      <SelectModal
+        label="Chọn Team"
+        data={teams.map(t => ({ label: t.teamName, value: t.id }))}
+        value={selectedTeam}
+        onChange={setSelectedTeam}
+        placeholder="Chọn Team"
+        title="Chọn Team"
+      />
+      <SelectModal
+        label="Chọn Unit"
+        data={units.map(u => ({ label: u.unitName, value: u.id }))}
+        value={selectedUnit}
+        onChange={setSelectedUnit}
+        placeholder="Chọn Unit"
+        title="Chọn Unit"
+        disabled={!selectedTeam}
+      />
       <Text style={styles.label}>Chọn ngày:</Text>
       <TouchableOpacity onPress={() => setDatePickerVisible(true)} style={styles.dateButton}>
         <Text style={styles.dateText}>
@@ -397,24 +374,7 @@ const handleSearchUsers = async () => {
       {loadingFlights ? (
         <ActivityIndicator size="small" color="#007AFF" style={{ marginTop: 10 }} />
       ) : flights && flights.length > 0 ? (
-        <>
-          <Text style={[styles.label, { marginTop: 20 }]}>Chọn chuyến bay:</Text>
-          <View style={styles.pickerContainer}>
-            <Picker
-              selectedValue={selectedFlightId}
-              onValueChange={(value) => setSelectedFlightId(value)}
-            >
-              <Picker.Item label="(Chọn chuyến bay)" value="" />
-              {flights.map((fl) => (
-                <Picker.Item
-                  key={fl.id}
-                  label={`${fl.flightNumber} (${fl.departureAirport.airportCode} → ${fl.arrivalAirport.airportCode})`}
-                  value={fl.id.toString()}
-                />
-              ))}
-            </Picker>
-          </View>
-        </>
+        <FlightSelectModal />
       ) : (
         shiftDate && (
           <Text style={styles.infoText}>
@@ -422,31 +382,39 @@ const handleSearchUsers = async () => {
           </Text>
         )
       )}
-      <Button title="Tìm kiếm nhân viên" onPress={handleSearchUsers} />
+      <TouchableOpacity style={styles.primaryButton} onPress={handleSearchUsers}>
+        <Ionicons name="search" size={20} color="white" style={{ marginRight: 6 }} />
+        <Text style={styles.primaryButtonText}>Tìm kiếm nhân viên</Text>
+      </TouchableOpacity>
       {loadingUsers && (
         <ActivityIndicator size="small" color="#007AFF" style={{ marginTop: 10 }} />
+      )}
+      {/* Luôn hiển thị SelectModal chọn nhân viên nếu có users */}
+      {users.length > 0 && (
+        <View style={{ marginTop: 16 }}>
+          <UserSelectModal />
+        </View>
       )}
     </View>
   );
 
   const ListFooter = () => (
     <View style={styles.footerContainer}>
-      <Button title="Áp dụng ca" onPress={handleApplyShift} />
+      <TouchableOpacity style={styles.primaryButton} onPress={handleApplyShift}>
+        <Ionicons name="checkmark-circle" size={20} color="white" style={{ marginRight: 6 }} />
+        <Text style={styles.primaryButtonText}>Áp dụng ca</Text>
+      </TouchableOpacity>
     </View>
   );
 
   return (
     <Layout>
       <FlatList
-        data={users}
-        keyExtractor={(item, index) =>
-          item.id ? item.id.toString() : index.toString()
-        }
-        renderItem={renderUserItem}
+        data={[]}
         ListHeaderComponent={ListHeader}
         ListFooterComponent={users.length > 0 ? ListFooter : null}
         contentContainerStyle={styles.listContainer}
-        nestedScrollEnabled={true}
+        style={{ flex: 1 }}
       />
     </Layout>
   );
@@ -523,5 +491,25 @@ const styles = StyleSheet.create({
     color: "#555",
     marginTop: 5,
     marginBottom: 10,
+  },
+  primaryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#007AFF',
+    paddingVertical: 13,
+    borderRadius: 8,
+    justifyContent: 'center',
+    marginTop: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  primaryButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 16,
+    letterSpacing: 1,
   },
 });

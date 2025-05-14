@@ -6,6 +6,7 @@ import {
   StyleSheet,
   FlatList,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 import Layout from "../Layout";
 import httpApiClient from "../../services";
@@ -27,7 +28,6 @@ function parseLocalDate(str) {
 
 // WeekStrip component hiển thị tuần (Thứ 2 -> Chủ nhật)
 function WeekStrip({ weekRange, selectedDate, onPressDay }) {
-  // KHÔNG dùng +07:00, chỉ parse local
   const start = parseLocalDate(weekRange.start);
   const weekdayLabels = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
   const days = Array.from({ length: 7 }).map((_, i) => {
@@ -112,6 +112,7 @@ export default function SearchActivityScreen({ navigation }) {
   const [markedDates, setMarkedDates] = useState({});
   const [isDatePickerVisible, setDatePickerVisible] = useState(false);
   const [weekRange, setWeekRange] = useState(getWeekRange(todayStr));
+  const [loading, setLoading] = useState(true);
 
   // Format ngày hiển thị
   const formatDate = d => {
@@ -123,22 +124,49 @@ export default function SearchActivityScreen({ navigation }) {
     });
   };
 
-  // Fetch activities trong tháng
-  const fetchMonth = async (m, y) => {
+  // Fetch activities theo ngày
+  const fetchByDate = async (dateStr) => {
+    setLoading(true);
     try {
-      const res = await httpApiClient.get(`activities/search?month=${m}&year=${y}`);
+      const res = await httpApiClient.get(`activities/search-by-date?date=${dateStr}`);
       const json = await res.json();
-      setAllActivities(Array.isArray(json.data) ? json.data : []);
+      setAllActivities(Array.isArray(json) ? json : (json.data || []));
     } catch {
       setAllActivities([]);
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Khi mount, lấy tháng hiện tại
+  // Fetch activities theo tuần
+  const fetchByWeek = async (start, end) => {
+    setLoading(true);
+    try {
+      const res = await httpApiClient.get(`activities/search-by-range?startDate=${start}&endDate=${end}`);
+      const json = await res.json();
+      setAllActivities(Array.isArray(json) ? json : (json.data || []));
+    } catch {
+      setAllActivities([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Khi mount, lấy ngày hiện tại
   useEffect(() => {
-    const now = new Date();
-    fetchMonth(now.getMonth() + 1, now.getFullYear());
+    fetchByDate(todayStr);
   }, []);
+
+  // Khi đổi searchType hoặc selectedDate, fetch lại dữ liệu phù hợp
+  useEffect(() => {
+    if (searchType === "week") {
+      const { start, end } = getWeekRange(selectedDate);
+      fetchByWeek(start, end);
+      setWeekRange(getWeekRange(selectedDate));
+    } else {
+      fetchByDate(selectedDate);
+    }
+  }, [searchType, selectedDate]);
 
   // Khi dữ liệu hoặc ngày chọn thay đổi: rebuild markedDates + filter activities
   useEffect(() => {
@@ -154,7 +182,7 @@ export default function SearchActivityScreen({ navigation }) {
       dots: m[selectedDate]?.dots || [{ color: "#007AFF" }],
     };
     setMarkedDates(m);
-  
+
     if (searchType === "week") {
       // Lọc các activity trong tuần
       const start = weekRange.start;
@@ -184,9 +212,6 @@ export default function SearchActivityScreen({ navigation }) {
     setSelectedDate(d.dateString);
     setWeekRange(getWeekRange(d.dateString));
   };
-
-  // Tháng thay đổi trong calendar
-  const onMonthChange = ({ month, year }) => fetchMonth(month, year);
 
   // Xóa
   const handleDelete = id => {
@@ -229,77 +254,102 @@ export default function SearchActivityScreen({ navigation }) {
             ))}
           </View>
 
-          {searchType === "date" ? (
-            <Calendar
-              current={selectedDate}
-              onDayPress={d => setSelectedDate(d.dateString)}
-              onMonthChange={onMonthChange}
-              markedDates={markedDates}
-              markingType="multi-dot"
-              theme={{
-                selectedDayBackgroundColor: "#007AFF",
-                todayTextColor: "#007AFF",
-                dotColor: "#007AFF",
-                selectedDotColor: "#fff",
-              }}
-              style={{ marginBottom: 10 }}
-              firstDay={1}
-            />
+          {loading ? (
+            <View style={{flex:1,justifyContent:'center',alignItems:'center',marginTop:30}}>
+              <ActivityIndicator size="large" color="#007AFF" />
+              <Text style={{color:'#007AFF',fontWeight:'600',fontSize:16,marginTop:16}}>Đang lấy dữ liệu hoạt động...</Text>
+            </View>
           ) : (
             <>
-              <View style={styles.weekDatePickerRow}>
-                <TouchableOpacity onPress={() => setDatePickerVisible(true)}>
-                  <Ionicons name="calendar-outline" size={24} color="#007AFF" />
-                </TouchableOpacity>
-                <Text style={styles.weekDateText}>
-                  {formatDate(weekRange.start)} - {formatDate(weekRange.end)}
-                </Text>
-              </View>
-              <DateTimePickerModal
-                isVisible={isDatePickerVisible}
-                mode="date"
-                onConfirm={handleWeekDateChange}
-                onCancel={() => setDatePickerVisible(false)}
+              {searchType === "date" ? (
+                <Calendar
+                  current={selectedDate}
+                  onDayPress={d => setSelectedDate(d.dateString)}
+                  markedDates={markedDates}
+                  markingType="multi-dot"
+                  theme={{
+                    selectedDayBackgroundColor: "#007AFF",
+                    todayTextColor: "#007AFF",
+                    dotColor: "#007AFF",
+                    selectedDotColor: "#fff",
+                  }}
+                  style={{ marginBottom: 10 }}
+                  firstDay={1}
+                />
+              ) : (
+                <>
+                  <View style={styles.weekDatePickerRow}>
+                    <TouchableOpacity onPress={() => setDatePickerVisible(true)}>
+                      <Ionicons name="calendar-outline" size={24} color="#007AFF" />
+                    </TouchableOpacity>
+                    <Text style={styles.weekDateText}>
+                      {formatDate(weekRange.start)} - {formatDate(weekRange.end)}
+                    </Text>
+                  </View>
+                  <DateTimePickerModal
+                    isVisible={isDatePickerVisible}
+                    mode="date"
+                    onConfirm={handleWeekDateChange}
+                    onCancel={() => setDatePickerVisible(false)}
+                  />
+                  <WeekStrip weekRange={weekRange} selectedDate={selectedDate} onPressDay={setSelectedDate} />
+                </>
+              )}
+
+              <Text style={styles.countText}>
+                {activities.length > 0
+                  ? `Có ${activities.length} hoạt động`
+                  : 'Không có hoạt động nào'}
+              </Text>
+              <FlatList
+                data={activities}
+                keyExtractor={item => item.id?.toString() || Math.random().toString()}
+                renderItem={({ item }) => {
+                  const isToday = getVNDateString(item.startTime) === todayStr;
+                  return (
+                    <View style={[styles.activityItem, isToday && styles.activityToday]}>
+                      <View style={styles.activityHeader}>
+                        <Ionicons name="calendar-outline" size={20} color="#007AFF" style={{marginRight:6}} />
+                        <Text style={[styles.activityName, isToday && styles.activityNameToday]}>{item.name}</Text>
+                      </View>
+                      <Text style={styles.activityInfo}>
+                        <Ionicons name="location-outline" size={16} color="#888" /> {item.location}
+                      </Text>
+                      <Text style={styles.activityInfo}>
+                        <Ionicons name="time-outline" size={16} color="#888" /> {item.startTime ? `${formatDate(getVNDateString(item.startTime))} ${item.startTime.slice(11, 16)}` : ""}
+                      </Text>
+                      <Text style={styles.activityInfo}>Ghi chú: {item.notes}</Text>
+                      {Array.isArray(item.participants) && item.participants.length > 0 && (
+                        <View style={{ marginTop: 6 }}>
+                          <Text style={{ fontWeight: "600", color: "#007AFF" }}>Người tham gia:</Text>
+                          {item.participants.map((p, i) => (
+                            <Text key={i} style={{ color: "#333", marginLeft: 8 }}>
+                              - {p.participantName}
+                            </Text>
+                          ))}
+                        </View>
+                      )}
+                      <View style={styles.actionRow}>
+                        <TouchableOpacity style={[styles.actionBtn, styles.editBtn]} onPress={() => handleEdit(item)}>
+                          <Ionicons name="create-outline" size={20} color="#007AFF" />
+                          <Text style={styles.actionText}>Sửa</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={[styles.actionBtn, styles.deleteBtn]} onPress={() => handleDelete(item.id)}>
+                          <Ionicons name="trash-outline" size={20} color="#FF3B30" />
+                          <Text style={[styles.actionText, { color: "#FF3B30" }]}>Xóa</Text>
+                        </TouchableOpacity>
+                      </View>
+                      {isToday && (
+                        <Text style={styles.todayLabel}>Hôm nay</Text>
+                      )}
+                    </View>
+                  );
+                }}
+                ListEmptyComponent={<Text style={styles.empty}>Không có hoạt động nào trong ngày này</Text>}
+                style={{ flex: 1 }}
               />
-              {/* Không hiển thị Calendar ở chế độ tuần */}
-              <WeekStrip weekRange={weekRange} selectedDate={selectedDate} onPressDay={setSelectedDate} />
             </>
           )}
-
-          <FlatList
-            data={activities}
-            keyExtractor={item => item.id?.toString() || Math.random().toString()}
-            renderItem={({ item }) => (
-              <View style={styles.activityItem}>
-                <Text style={styles.activityName}>{item.name}</Text>
-                <Text style={styles.activityInfo}>
-                  Địa điểm: {item.location} | {formatDate(getVNDateString(item.startTime))} {item.startTime.slice(11, 16)}
-                </Text>
-                <Text style={styles.activityInfo}>Ghi chú: {item.notes}</Text>
-                {Array.isArray(item.participants) && item.participants.length > 0 && (
-                  <View style={{ marginTop: 6 }}>
-                    <Text style={{ fontWeight: "600", color: "#007AFF" }}>Người tham gia:</Text>
-                    {item.participants.map((p, i) => (
-                      <Text key={i} style={{ color: "#333", marginLeft: 8 }}>
-                        - {p.participantName}
-                      </Text>
-                    ))}
-                  </View>
-                )}
-                <View style={styles.actionRow}>
-                  <TouchableOpacity style={styles.actionBtn} onPress={() => handleEdit(item)}>
-                    <Ionicons name="create-outline" size={22} color="#007AFF" />
-                    <Text style={styles.actionText}>Sửa</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.actionBtn} onPress={() => handleDelete(item.id)}>
-                    <Ionicons name="trash-outline" size={22} color="#FF3B30" />
-                    <Text style={[styles.actionText, { color: "#FF3B30" }]}>Xóa</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            )}
-            ListEmptyComponent={<Text style={styles.empty}>Không có hoạt động nào trong ngày này</Text>}
-          />
         </View>
       </CalendarProvider>
     </Layout>
@@ -321,11 +371,60 @@ const styles = StyleSheet.create({
   weekdaySelected: { color: "#fff" },
   daynum: { fontSize: 16, color: "#333", marginTop: 4 },
   daynumSelected: { color: "#fff", fontWeight: "bold" },
-  activityItem: { backgroundColor: "#fff", borderRadius: 10, padding: 15, marginBottom: 12, shadowColor: "#000", shadowOpacity: 0.08, shadowRadius: 3, elevation: 2 },
-  activityName: { fontWeight: "bold", fontSize: 17, color: "#007AFF", marginBottom: 4 },
-  activityInfo: { color: "#333", fontSize: 14, marginBottom: 2 },
+  countText: {
+    textAlign: 'center',
+    color: '#333',
+    fontWeight: '600',
+    marginBottom: 10,
+    fontSize: 15,
+  },
+  activityItem: {
+    backgroundColor: "#fff",
+    borderRadius: 14,
+    padding: 16,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: "#e0e7ef",
+    shadowColor: "#007AFF",
+    shadowOpacity: 0.06,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  activityHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  activityName: { fontWeight: "bold", fontSize: 17, color: "#007AFF", marginBottom: 2 },
+  activityInfo: { color: "#333", fontSize: 14, marginBottom: 2, marginLeft: 2 },
   actionRow: { flexDirection: "row", justifyContent: "flex-end", marginTop: 10 },
-  actionBtn: { flexDirection: "row", alignItems: "center", marginLeft: 18 },
+  actionBtn: { flexDirection: "row", alignItems: "center", borderRadius: 8, paddingVertical: 7, paddingHorizontal: 14, marginLeft: 10, backgroundColor: '#f7fafd', borderWidth: 1, borderColor: '#e0e7ef' },
+  editBtn: { backgroundColor: '#e6f7ff', borderColor: '#b3d4fc' },
+  deleteBtn: { backgroundColor: '#fff0f0', borderColor: '#ffd6d6' },
   actionText: { marginLeft: 4, color: "#007AFF", fontWeight: "bold", fontSize: 15 },
   empty: { textAlign: "center", marginTop: 20, color: "#888" },
+  activityToday: {
+    borderColor: '#FF9500',
+    borderWidth: 2,
+    backgroundColor: '#FFF7E6',
+    shadowColor: '#FF9500',
+    shadowOpacity: 0.12,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  activityNameToday: {
+    color: '#FF9500',
+  },
+  todayLabel: {
+    alignSelf: 'flex-start',
+    marginTop: 8,
+    backgroundColor: '#FF9500',
+    color: '#fff',
+    fontWeight: 'bold',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 2,
+    fontSize: 13,
+    overflow: 'hidden',
+  },
 });

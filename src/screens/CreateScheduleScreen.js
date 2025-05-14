@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { 
   View, 
   Text, 
@@ -96,7 +96,6 @@ const CreateScheduleScreen = () => {
       Alert.alert("Lỗi", "Có lỗi xảy ra khi kết nối đến server");
     }
   };
-  
 
   return (
     <Layout>
@@ -175,9 +174,9 @@ const CreateScheduleScreen = () => {
           multiline
         />
 
-        <View style={{ marginTop: 20 }}>
-          <Button title="Tạo lịch trực" onPress={handleSubmit} color="#007AFF" />
-        </View>
+        <TouchableOpacity style={styles.createButton} onPress={handleSubmit}>
+          <Text style={styles.createButtonText}>TẠO LỊCH TRỰC</Text>
+        </TouchableOpacity>
       </View>
     </Layout>
   );
@@ -243,6 +242,24 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#007AFF",
     fontWeight: "600",
+  },
+  createButton: {
+    backgroundColor: '#007AFF',
+    paddingVertical: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  createButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 18,
+    letterSpacing: 1,
   },
 });
 

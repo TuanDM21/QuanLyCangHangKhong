@@ -34,6 +34,7 @@ const SearchFlightScreen = () => {
   const [flights, setFlights] = useState([]);
   const [loading, setLoading] = useState(false);
   const [isDatePickerVisible, setIsDatePickerVisible] = useState(false);
+  const [isSearched, setIsSearched] = useState(false);
   const navigation = useNavigation();
 
   // Hàm tìm kiếm chuyến bay theo ngày và từ khóa (tìm kiếm chính xác theo ngày)
@@ -44,6 +45,7 @@ const SearchFlightScreen = () => {
     }
     try {
       setLoading(true);
+      setIsSearched(true);
       const dateStr = formatDate(searchDate);
       const data = await httpApiClient.get(
         `flights/searchByDateAndKeyword?date=${dateStr}&keyword=${searchKeyword}`
@@ -87,20 +89,25 @@ const SearchFlightScreen = () => {
   const renderItem = ({ item }) => (
     <View style={styles.card}>
       <View style={styles.cardHeader}>
-        <Ionicons name="airplane-outline" size={24} color="#007AFF" />
-        <Text style={styles.flightNumber}>{item.flightNumber}</Text>
+        <View style={{flexDirection:'row',alignItems:'center'}}>
+          <Ionicons name="airplane-outline" size={26} color="#007AFF" />
+          <Text style={styles.flightNumber}>{item.flightNumber}</Text>
+          <View style={styles.flightBadge}><Text style={styles.flightBadgeText}>{item.status || 'Đang hoạt động'}</Text></View>
+        </View>
+        <Ionicons name="chevron-forward" size={22} color="#bbb" />
       </View>
-      <Text style={styles.flightText}>
-        🕒 {formatTime(item.departureTime)} - {formatTime(item.arrivalTime)}
-      </Text>
-      <Text style={styles.flightText}>📅 {item.flightDate}</Text>
-      {/* Hiển thị mã sân bay (không render object) */}
-      <Text style={styles.infoText}>
-        {item.departureAirport?.airportCode ?? "Chưa xác định"}{" "}
-        {"→"}{" "}
-        {item.arrivalAirport?.airportCode ?? "Chưa xác định"}
-      </Text>
-
+      <View style={{flexDirection:'row',alignItems:'center',marginBottom:4}}>
+        <Ionicons name="time-outline" size={18} color="#007AFF" style={{marginRight:4}} />
+        <Text style={styles.flightText}>{formatTime(item.departureTime)} - {formatTime(item.arrivalTime)}</Text>
+      </View>
+      <View style={{flexDirection:'row',alignItems:'center',marginBottom:4}}>
+        <Ionicons name="calendar-outline" size={18} color="#007AFF" style={{marginRight:4}} />
+        <Text style={styles.flightText}>{item.flightDate}</Text>
+      </View>
+      <View style={{flexDirection:'row',alignItems:'center',marginBottom:4}}>
+        <Ionicons name="location-outline" size={18} color="#007AFF" style={{marginRight:4}} />
+        <Text style={styles.flightText}>{item.departureAirport?.airportCode ?? "?"} → {item.arrivalAirport?.airportCode ?? "?"}</Text>
+      </View>
       <View style={styles.buttonContainer}>
         <TouchableOpacity
           style={[styles.button, styles.updateButton]}
@@ -124,33 +131,47 @@ const SearchFlightScreen = () => {
     <Layout>
       <View style={styles.container}>
         <Text style={styles.title}>Tìm kiếm chuyến bay</Text>
-        {/* Date Picker thay vì TextInput cho ngày */}
-        <TouchableOpacity
-          style={styles.dateButton}
-          onPress={() => setIsDatePickerVisible(true)}
-        >
-          <Text style={styles.dateText}>
-            {searchDate ? formatDate(searchDate) : "Chọn ngày chuyến bay"}
-          </Text>
-        </TouchableOpacity>
-        <DateTimePickerModal
-          isVisible={isDatePickerVisible}
-          mode="date"
-          onConfirm={(date) => {
-            setSearchDate(date);
-            setIsDatePickerVisible(false);
-          }}
-          onCancel={() => setIsDatePickerVisible(false)}
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Nhập từ khóa (số hiệu, sân bay...)"
-          value={searchKeyword}
-          onChangeText={setSearchKeyword}
-        />
-        <TouchableOpacity style={styles.searchButton} onPress={handleSearch}>
-          <Text style={styles.searchButtonText}>Tìm kiếm</Text>
-        </TouchableOpacity>
+        <View style={styles.searchBarModern}>
+          <TouchableOpacity
+            style={styles.dateButtonModern}
+            onPress={() => setIsDatePickerVisible(true)}
+          >
+            <Ionicons name="calendar-outline" size={20} color="#007AFF" style={{marginRight:6}} />
+            <Text style={styles.dateTextModern}>
+              {searchDate ? formatDate(searchDate) : "Chọn ngày chuyến bay"}
+            </Text>
+          </TouchableOpacity>
+          <DateTimePickerModal
+            isVisible={isDatePickerVisible}
+            mode="date"
+            onConfirm={(date) => {
+              setSearchDate(date);
+              setIsDatePickerVisible(false);
+            }}
+            onCancel={() => setIsDatePickerVisible(false)}
+          />
+          <View style={styles.inputWrapperModern}>
+            <Ionicons name="search-outline" size={20} color="#007AFF" style={{marginRight:6}} />
+            <TextInput
+              style={styles.inputModern}
+              placeholder="Nhập từ khóa (số hiệu, sân bay...)"
+              value={searchKeyword}
+              onChangeText={setSearchKeyword}
+              placeholderTextColor="#aaa"
+            />
+          </View>
+          <TouchableOpacity style={styles.searchButtonModern} onPress={handleSearch}>
+            <Ionicons name="search" size={20} color="#fff" />
+            <Text style={styles.searchButtonTextModern}>Tìm kiếm</Text>
+          </TouchableOpacity>
+        </View>
+        {/* Tổng số chuyến bay */}
+        {isSearched && (
+          <View style={styles.summaryRow}>
+            <Ionicons name="airplane" size={20} color="#007AFF" style={{marginRight:6}} />
+            <Text style={styles.summaryText}>Tìm thấy {flights.length} chuyến bay</Text>
+          </View>
+        )}
         {loading ? (
           <ActivityIndicator size="large" color="#007AFF" style={{ marginTop: 20 }} />
         ) : (
@@ -159,6 +180,7 @@ const SearchFlightScreen = () => {
             keyExtractor={(item) => item.id.toString()}
             renderItem={renderItem}
             contentContainerStyle={styles.listContainer}
+            style={{ flex: 1 }}
             ListEmptyComponent={
               <Text style={styles.emptyText}>
                 Không có chuyến bay nào được tìm thấy.
@@ -224,65 +246,160 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   card: {
-    backgroundColor: "white",
-    padding: 15,
-    marginVertical: 8,
-    borderRadius: 10,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 5,
-    elevation: 2,
+    backgroundColor: '#fff',
+    padding: 20,
+    marginVertical: 10,
+    borderRadius: 18,
+    shadowColor: '#007AFF',
+    shadowOpacity: 0.13,
+    shadowRadius: 10,
+    elevation: 3,
+    borderWidth: 1.5,
+    borderColor: '#e0e7ff',
+    marginHorizontal: 2,
   },
   cardHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 5,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    justifyContent: 'space-between',
   },
   flightNumber: {
-    fontSize: 18,
-    fontWeight: "bold",
+    fontSize: 20,
+    fontWeight: 'bold',
     marginLeft: 10,
-    color: "#007AFF",
+    color: '#007AFF',
+    letterSpacing: 1.1,
+  },
+  flightBadge: {
+    backgroundColor: '#e0e7ff',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    marginLeft: 8,
+  },
+  flightBadgeText: {
+    color: '#007AFF',
+    fontWeight: 'bold',
+    fontSize: 12,
   },
   flightText: {
     fontSize: 16,
-    color: "#333",
+    color: '#333',
     marginBottom: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   infoText: {
-    fontSize: 16,
-    color: "#333",
+    fontSize: 15,
+    color: '#555',
     marginVertical: 4,
-    fontStyle: "italic",
+    fontStyle: 'italic',
   },
   buttonContainer: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    marginTop: 10,
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginTop: 14,
   },
   button: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 5,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 18,
+    borderRadius: 10,
+    marginHorizontal: 4,
   },
   updateButton: {
-    backgroundColor: "#007AFF",
+    backgroundColor: '#007AFF',
   },
   deleteButton: {
-    backgroundColor: "#FF3B30",
+    backgroundColor: '#FF3B30',
   },
   buttonText: {
-    color: "white",
-    fontWeight: "bold",
-    marginLeft: 5,
-    fontSize: 14,
+    color: 'white',
+    fontWeight: 'bold',
+    marginLeft: 7,
+    fontSize: 15,
   },
   emptyText: {
-    textAlign: "center",
+    textAlign: 'center',
     fontSize: 16,
-    color: "#555",
+    color: '#555',
     marginTop: 20,
+  },
+  searchBarModern: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 18,
+    flexDirection: 'column',
+    shadowColor: '#007AFF',
+    shadowOpacity: 0.10,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  dateButtonModern: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f0f4ff',
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#e0e7ff',
+  },
+  dateTextModern: {
+    fontSize: 16,
+    color: '#007AFF',
+    fontWeight: '600',
+  },
+  inputWrapperModern: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f6f8fa',
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#e0e7ff',
+  },
+  inputModern: {
+    flex: 1,
+    backgroundColor: 'transparent',
+    paddingVertical: 10,
+    fontSize: 16,
+    color: '#222',
+  },
+  searchButtonModern: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#007AFF',
+    borderRadius: 10,
+    paddingVertical: 12,
+    justifyContent: 'center',
+    marginTop: 2,
+  },
+  searchButtonTextModern: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 16,
+    marginLeft: 8,
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    marginTop: 2,
+    backgroundColor: '#f0f4ff',
+    borderRadius: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    alignSelf: 'flex-start',
+  },
+  summaryText: {
+    fontSize: 15,
+    color: '#007AFF',
+    fontWeight: '600',
   },
 });

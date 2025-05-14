@@ -17,6 +17,7 @@ import Layout from "../Layout";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { Picker } from "@react-native-picker/picker";
 import httpApiClient from "../../services";
+import SelectModal from "../../components/SelectModal";
 
 const PARTICIPANT_TYPES = [
   { label: "User", value: "USER" },
@@ -185,7 +186,7 @@ export default function EditActivityScreen() {
   return (
     <Layout>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
-        <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+        <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled" style={{ flex: 1 }}>
           <Text style={styles.title}>Sửa Activity</Text>
 
           <Text style={styles.label}>Tên activity</Text>
@@ -226,25 +227,28 @@ export default function EditActivityScreen() {
             <TextInput style={styles.input} placeholder="Tìm kiếm user..." value={userSearch} onChangeText={setUserSearch} />
           )}
 
-          {participantType==="TEAM" && (
-            <View style={styles.input}>
-              <Picker selectedValue={selectedTeam?.id} onValueChange={id=>setSelectedTeam(teams.find(t=>t.id===id)||null)}>
-                <Picker.Item label="Chọn team" value={null} />
-                {teams.map(t=> <Picker.Item key={t.id} label={t.teamName} value={t.id}/>)}
-              </Picker>
-            </View>
+          {participantType === "TEAM" && (
+            <SelectModal
+              data={teams.map(t => ({ label: t.teamName, value: t.id }))}
+              value={selectedTeam?.id || ""}
+              onChange={id => setSelectedTeam(teams.find(t => t.id === id) || null)}
+              placeholder="Chọn team"
+              title="Chọn team"
+            />
+          )}
+          {participantType === "UNIT" && (
+            <SelectModal
+              data={units.map(u => ({ label: u.unitName, value: u.id }))}
+              value={selectedUnit?.id || ""}
+              onChange={id => setSelectedUnit(units.find(u => u.id === id) || null)}
+              placeholder="Chọn unit"
+              title="Chọn unit"
+            />
           )}
 
-          {participantType==="UNIT" && (
-            <View style={styles.input}>
-              <Picker selectedValue={selectedUnit?.id} onValueChange={id=>setSelectedUnit(units.find(u=>u.id===id)||null)}>
-                <Picker.Item label="Chọn unit" value={null} />
-                {units.map(u=> <Picker.Item key={u.id} label={u.unitName} value={u.id}/>)}
-              </Picker>
-            </View>
-          )}
-
-          <Button title="Thêm người tham gia" onPress={handleAddParticipant} />
+          <TouchableOpacity style={{backgroundColor:'#007AFF',borderRadius:8,paddingVertical:13,alignItems:'center',marginTop:8,marginBottom:8,shadowColor:'#000',shadowOffset:{width:0,height:2},shadowOpacity:0.12,shadowRadius:3,elevation:2}} onPress={handleAddParticipant}>
+            <Text style={{color:'white',fontWeight:'bold',fontSize:16,letterSpacing:1}}>Thêm người tham gia</Text>
+          </TouchableOpacity>
 
           {participantType==="USER" && userResults.length>0 && (
             <FlatList data={userResults} keyExtractor={i=>i.id.toString()} scrollEnabled={false} nestedScrollEnabled={false}
@@ -269,15 +273,19 @@ export default function EditActivityScreen() {
               <Text style={{ color: "#888", marginBottom: 8 }}>Chưa có người tham gia</Text>
             )}
             {participants.map((p,idx)=>(
-              <View style={styles.partRow} key={idx}>
-                <Text style={styles.partText}>{p.participantName}</Text>
-                <TouchableOpacity onPress={()=>handleRemoveParticipant(idx)}><Text style={styles.removeText}>Xóa</Text></TouchableOpacity>
+              <View key={idx} style={{flexDirection:'row',alignItems:'center',marginBottom:6,backgroundColor:'#f7fafd',borderRadius:14,paddingVertical:6,paddingHorizontal:10,borderWidth:1,borderColor:'#e0e7ef'}}>
+                <Text style={{flex:1,fontWeight:'500',fontSize:15,color:'#222'}} numberOfLines={1}>{p.participantName}</Text>
+                <TouchableOpacity onPress={()=>handleRemoveParticipant(idx)} style={{marginLeft:6}}>
+                  <Text style={{color:'#FF3B30',fontWeight:'bold'}}>Xóa</Text>
+                </TouchableOpacity>
               </View>
             ))}
           </View>
 
           <View style={{marginTop:20}}>
-            <Button title="Cập nhật activity" onPress={handleSubmit} color="#007AFF" />
+            <TouchableOpacity style={{backgroundColor:'#007AFF',borderRadius:8,paddingVertical:15,alignItems:'center',shadowColor:'#000',shadowOffset:{width:0,height:2},shadowOpacity:0.12,shadowRadius:3,elevation:2}} onPress={handleSubmit}>
+              <Text style={{color:'white',fontWeight:'bold',fontSize:18,letterSpacing:1}}>Cập nhật activity</Text>
+            </TouchableOpacity>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

@@ -14,6 +14,7 @@ import Layout from "./Layout";
 import { Ionicons } from "@expo/vector-icons";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import httpApiClient from "../services";
+import SelectModal from "../components/SelectModal";
 
 // Hàm fetch tách biệt, KHÔNG gọi setUnits/setShifts trực tiếp.
 // Trả về { units, shifts } cho component.
@@ -228,33 +229,23 @@ const ApplyShiftScreen = () => {
   const ListHeader = () => (
     <View style={styles.headerContainer}>
       <Text style={styles.title}>Áp dụng ca làm việc</Text>
-      <Text style={styles.label}>Chọn Team:</Text>
-      <View style={styles.pickerContainer}>
-        <Picker
-          selectedValue={selectedTeam}
-          onValueChange={(v) => setSelectedTeam(v)}
-        >
-          <Picker.Item label="(Chọn Team)" value="" />
-          {teams.map((t) => (
-            <Picker.Item key={t.id} label={t.teamName} value={t.id.toString()} />
-          ))}
-        </Picker>
-      </View>
-
-      <Text style={styles.label}>Chọn Unit:</Text>
-      <View style={styles.pickerContainer}>
-        <Picker
-          selectedValue={selectedUnit}
-          onValueChange={(v) => setSelectedUnit(v)}
-          enabled={!!selectedTeam}
-        >
-          <Picker.Item label="(Chọn Unit)" value="" />
-          {units.map((u) => (
-            <Picker.Item key={u.id} label={u.unitName} value={u.id.toString()} />
-          ))}
-        </Picker>
-      </View>
-
+      <SelectModal
+        label="Chọn Team"
+        data={teams.map(t => ({ label: t.teamName, value: t.id }))}
+        value={selectedTeam}
+        onChange={setSelectedTeam}
+        placeholder="Chọn Team"
+        title="Chọn Team"
+      />
+      <SelectModal
+        label="Chọn Unit"
+        data={units.map(u => ({ label: u.unitName, value: u.id }))}
+        value={selectedUnit}
+        onChange={setSelectedUnit}
+        placeholder="Chọn Unit"
+        title="Chọn Unit"
+        disabled={!selectedTeam}
+      />
       <Text style={styles.label}>Chọn ngày:</Text>
       <TouchableOpacity
         style={styles.dateButton}
@@ -274,35 +265,61 @@ const ApplyShiftScreen = () => {
         onCancel={() => setDatePickerVisible(false)}
       />
 
-      <Button title="Tìm kiếm nhân viên" onPress={handleSearchUsers} />
+      <TouchableOpacity style={styles.primaryButton} onPress={handleSearchUsers}>
+        <Ionicons name="search" size={20} color="white" style={{ marginRight: 6 }} />
+        <Text style={styles.primaryButtonText}>Tìm kiếm nhân viên</Text>
+      </TouchableOpacity>
       {loadingUsers && <ActivityIndicator style={{ marginTop: 10 }} />}
     </View>
   );
 
   const ListFooter = () => (
     <View style={styles.footerContainer}>
-      <Picker
-        selectedValue={selectedShiftCode}
-        onValueChange={(v) => setSelectedShiftCode(v)}
-      >
-        <Picker.Item label="(Chọn ca)" value="" />
-        {shifts.map((s) => (
-          <Picker.Item key={s.id} label={s.shiftCode} value={s.shiftCode} />
-        ))}
-      </Picker>
-      <Button title="Áp dụng ca" onPress={handleApplyShift} />
+      <SelectModal
+        label="Chọn ca trực"
+        data={shifts.map(s => ({ label: s.shiftCode, value: s.shiftCode }))}
+        value={selectedShiftCode}
+        onChange={setSelectedShiftCode}
+        placeholder="Chọn ca trực"
+        title="Chọn ca trực"
+      />
+      <TouchableOpacity style={[styles.primaryButton, { marginTop: 10 }]} onPress={handleApplyShift}>
+        <Ionicons name="checkmark-circle" size={20} color="white" style={{ marginRight: 6 }} />
+        <Text style={styles.primaryButtonText}>Áp dụng ca</Text>
+      </TouchableOpacity>
     </View>
   );
+
+  // Thay FlatList nhân viên bằng SelectModal multi-select
+  const ListUserSelect = () => {
+    const disabledUserIds = users.filter(u => u.assignedFlight || u.assignedShiftCode).map(u => u.id);
+    return (
+      <SelectModal
+        label="Chọn nhân viên"
+        data={users.map(u => ({ label: u.name + (u.assignedFlight ? ' [Đã phục vụ chuyến bay]' : u.assignedShiftCode ? ` [Ca trực: ${u.assignedShiftCode}]` : ''), value: u.id }))}
+        multi
+        selectedValues={selectedUserIds}
+        onChange={setSelectedUserIds}
+        placeholder="Chọn nhân viên"
+        title="Chọn nhân viên"
+        disabledValues={disabledUserIds}
+      />
+    );
+  }
 
   return (
     <Layout>
       <FlatList
-        data={users}
-        keyExtractor={(item) => item.id.toString()}
-        renderItem={renderUserItem}
-        ListHeaderComponent={ListHeader}
-        ListFooterComponent={users.length ? ListFooter : null}
+        data={[]}
+        ListHeaderComponent={() => (
+          <>
+            {ListHeader()}
+            {users.length > 0 && ListUserSelect()}
+          </>
+        )}
+        ListFooterComponent={users.length > 0 ? ListFooter : null}
         contentContainerStyle={styles.listContainer}
+        style={{ flex: 1 }}
       />
     </Layout>
   );
@@ -323,4 +340,24 @@ const styles = StyleSheet.create({
   selectedUserItem: { backgroundColor: "#d0f0c0" },
   assignedUser: { backgroundColor: "#ffe4b5" },
   userName: { fontSize: 16 },
+  primaryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#007AFF',
+    paddingVertical: 13,
+    borderRadius: 8,
+    justifyContent: 'center',
+    marginTop: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  primaryButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 16,
+    letterSpacing: 1,
+  },
 });

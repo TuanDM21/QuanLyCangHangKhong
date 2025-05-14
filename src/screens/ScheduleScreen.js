@@ -9,7 +9,7 @@ const ScheduleScreen = () => {
 
   return (
     <Layout>
-      <View style={styles.container}>
+      <View style={[styles.container, { flex: 1 }]}>
         <Text style={styles.title}>Lịch trực</Text>
         
         <View style={styles.menu}>

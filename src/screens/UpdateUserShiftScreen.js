@@ -13,6 +13,7 @@ import Layout from "./Layout";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import httpApiClient from "../services";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
+import SelectModal from "../components/SelectModal";
 
 const UpdateUserShiftScreen = () => {
   const navigation = useNavigation();
@@ -129,17 +130,13 @@ const UpdateUserShiftScreen = () => {
         />
 
         <Text style={styles.label}>Chọn ca trực (theo ID):</Text>
-        <View style={styles.pickerContainer}>
-          <Picker
-            selectedValue={shiftId}
-            onValueChange={(value) => setShiftId(value)}
-          >
-            <Picker.Item label="(Chọn ca)" value="" />
-            {shifts.map((s) => (
-              <Picker.Item key={s.id} label={s.shiftCode} value={s.id} />
-            ))}
-          </Picker>
-        </View>
+        <SelectModal
+          data={shifts.map(s => ({ label: s.shiftCode, value: s.id }))}
+          value={shiftId}
+          onChange={setShiftId}
+          placeholder="Chọn ca trực"
+          title="Chọn ca trực"
+        />
 
         <Button title="Cập nhật" onPress={handleUpdate} />
       </View>

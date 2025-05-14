@@ -14,6 +14,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import httpApiClient from "../services";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
+import SelectModal from "../components/SelectModal";
 
 const SearchScheduleScreen = () => {
   // State cho ngày, team, unit
@@ -286,88 +287,71 @@ const SearchScheduleScreen = () => {
         onCancel={hideDatePicker}
       />
 
-      <FlatList
-        data={searchResults}
-        keyExtractor={(item, index) =>
-          item.scheduleId
-            ? item.scheduleId.toString()
-            : item.id
-            ? item.id.toString()
-            : index.toString()
-        }
-        renderItem={renderItem}
-        ListHeaderComponent={
-          <View style={styles.headerContainer}>
-            <Text style={styles.title}>Tìm kiếm lịch trực</Text>
+      <View style={styles.headerContainer}>
+        <Text style={styles.title}>Tìm kiếm lịch trực</Text>
 
-            {/* Chọn loại lịch trực */}
-            <Text style={styles.label}>Loại lịch trực:</Text>
-            <View style={styles.pickerContainer}>
-              <Picker
-                selectedValue={scheduleType}
-                onValueChange={(value) => setScheduleType(value)}
-              >
-                <Picker.Item label="Lịch trực theo ca" value="user-shifts" />
-                <Picker.Item label="Lịch trực chuyến bay" value="user-flight-shifts" />
-              </Picker>
-            </View>
+        {/* Chọn loại lịch trực */}
+        <Text style={styles.label}>Loại lịch trực:</Text>
+        <SelectModal
+          data={[
+            { label: "Lịch trực theo ca", value: "user-shifts" },
+            { label: "Lịch trực chuyến bay", value: "user-flight-shifts" },
+          ]}
+          value={scheduleType}
+          onChange={setScheduleType}
+          placeholder="Chọn loại lịch trực"
+          title="Chọn loại lịch trực"
+        />
 
-            <TouchableOpacity onPress={showDatePicker} activeOpacity={1}>
-              <View style={styles.input}>
-                <Text style={{ color: shiftDate ? "#222" : "#aaa" }}>
-                  {shiftDate || "Nhập ngày (YYYY-MM-DD)"}
-                </Text>
-              </View>
-            </TouchableOpacity>
-
-            <Text style={styles.label}>Chọn Team (ID):</Text>
-            <View style={styles.pickerContainer}>
-              <Picker
-                selectedValue={selectedTeam}
-                onValueChange={(value) => setSelectedTeam(value)}
-              >
-                <Picker.Item label="(Chọn Team)" value="" />
-                {teams.map((team) => (
-                  <Picker.Item
-                    key={team.id}
-                    label={team.teamName}
-                    value={team.id.toString()}
-                  />
-                ))}
-              </Picker>
-            </View>
-
-            <Text style={styles.label}>Chọn Unit (ID):</Text>
-            <View style={styles.pickerContainer}>
-              <Picker
-                selectedValue={selectedUnit}
-                onValueChange={(value) => setSelectedUnit(value)}
-                enabled={!!selectedTeam}
-              >
-                <Picker.Item label="(Chọn Unit)" value="" />
-                {Array.isArray(units) &&
-                  units.map((unit) => (
-                    <Picker.Item
-                      key={unit.id}
-                      label={unit.unitName}
-                      value={unit.id.toString()}
-                    />
-                  ))}
-              </Picker>
-            </View>
-
-            <Button title="Tìm kiếm" onPress={handleSearch} />
-          </View>
-        }
-        contentContainerStyle={styles.listContainer}
-        ListEmptyComponent={
-          searchResults.length === 0 && shiftDate ? (
-            <Text style={{ textAlign: "center", marginTop: 20 }}>
-              Không có kết quả
+        <TouchableOpacity onPress={showDatePicker} activeOpacity={1}>
+          <View style={styles.input}>
+            <Text style={{ color: shiftDate ? "#222" : "#aaa" }}>
+              {shiftDate || "Nhập ngày (YYYY-MM-DD)"}
             </Text>
-          ) : null
-        }
-      />
+          </View>
+        </TouchableOpacity>
+
+        <Text style={styles.label}>Chọn Team (ID):</Text>
+        <SelectModal
+          data={teams.map(t => ({ label: t.teamName, value: t.id.toString() }))}
+          value={selectedTeam}
+          onChange={setSelectedTeam}
+          placeholder="(Chọn Team)"
+          title="Chọn Team"
+        />
+        <Text style={styles.label}>Chọn Unit (ID):</Text>
+        <SelectModal
+          data={units.map(u => ({ label: u.unitName, value: u.id.toString() }))}
+          value={selectedUnit}
+          onChange={setSelectedUnit}
+          placeholder="(Chọn Unit)"
+          title="Chọn Unit"
+          disabled={!selectedTeam}
+        />
+
+        <TouchableOpacity style={styles.searchButton} onPress={handleSearch}>
+          <Text style={styles.searchButtonText}>TÌM KIẾM</Text>
+        </TouchableOpacity>
+
+        {/* Hiển thị số lượng kết quả */}
+        {shiftDate !== "" && (
+          <Text style={styles.resultCountText}>
+            {searchResults.length > 0
+              ? `Tìm thấy ${searchResults.length} kết quả`
+              : "Không có kết quả"}
+          </Text>
+        )}
+      </View>
+
+      {/* Danh sách kết quả */}
+      {searchResults.length > 0 && (
+        <FlatList
+          data={searchResults}
+          keyExtractor={(item, idx) => (item.scheduleId || item.flightId || idx).toString()}
+          renderItem={renderItem}
+          contentContainerStyle={styles.listContainer}
+        />
+      )}
     </Layout>
   );
 };
@@ -440,5 +424,29 @@ const styles = StyleSheet.create({
     color: "white",
     marginLeft: 5,
     fontWeight: "600",
+  },
+  searchButton: {
+    backgroundColor: '#007AFF',
+    paddingVertical: 14,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  searchButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 17,
+    letterSpacing: 1,
+  },
+  resultCountText: {
+    fontSize: 16,
+    fontWeight: "600",
+    marginTop: 10,
+    textAlign: "center",
   },
 });
