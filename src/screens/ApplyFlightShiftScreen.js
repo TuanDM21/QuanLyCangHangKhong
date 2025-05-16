@@ -16,6 +16,7 @@ import { useNavigation } from "@react-navigation/native";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import httpApiClient from "../services";
 import SelectModal from "../components/SelectModal";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const ApplyFlightShiftScreen = () => {
   const navigation = useNavigation();
@@ -25,6 +26,7 @@ const ApplyFlightShiftScreen = () => {
   const [units, setUnits] = useState([]);
   const [selectedTeam, setSelectedTeam] = useState("");
   const [selectedUnit, setSelectedUnit] = useState("");
+  const [userTeamId, setUserTeamId] = useState("");
 
   // --- State cho ngày (Date object) ---
   const [shiftDate, setShiftDate] = useState(null);
@@ -135,7 +137,21 @@ const ApplyFlightShiftScreen = () => {
     }
   }, [shiftDate]);
 
-// ...existing code...
+  useEffect(() => {
+    (async () => {
+      try {
+        const userStr = await AsyncStorage.getItem("user");
+        if (userStr) {
+          const user = JSON.parse(userStr);
+          setUserTeamId(user.teamId ? user.teamId.toString() : "");
+          setSelectedTeam(user.teamId ? user.teamId.toString() : "");
+        }
+      } catch (e) {
+        setUserTeamId("");
+      }
+    })();
+  }, []);
+
 const handleSearchUsers = async () => {
   if (!selectedTeam) {
     Alert.alert("Lỗi", "Vui lòng chọn Team!");
@@ -207,7 +223,7 @@ const handleSearchUsers = async () => {
     setLoadingUsers(false);
   }
 };
-// ...existing code...
+
   useEffect(() => {
     const fetchFlightShiftData = async () => {
       if (shiftDate && selectedFlightId && users.length > 0) {
@@ -339,14 +355,12 @@ const handleSearchUsers = async () => {
   const ListHeader = () => (
     <View style={styles.headerContainer}>
       <Text style={styles.title}>Áp dụng ca theo chuyến bay</Text>
-      <SelectModal
-        label="Chọn Team"
-        data={teams.map(t => ({ label: t.teamName, value: t.id }))}
-        value={selectedTeam}
-        onChange={setSelectedTeam}
-        placeholder="Chọn Team"
-        title="Chọn Team"
-      />
+      <Text style={styles.label}>Team:</Text>
+      <View style={styles.dateButton}>
+        <Text style={styles.dateText}>
+          {teams.find(t => t.id.toString() === userTeamId)?.teamName || "(Không xác định)"}
+        </Text>
+      </View>
       <SelectModal
         label="Chọn Unit"
         data={units.map(u => ({ label: u.unitName, value: u.id }))}
@@ -354,7 +368,7 @@ const handleSearchUsers = async () => {
         onChange={setSelectedUnit}
         placeholder="Chọn Unit"
         title="Chọn Unit"
-        disabled={!selectedTeam}
+        disabled={!userTeamId}
       />
       <Text style={styles.label}>Chọn ngày:</Text>
       <TouchableOpacity onPress={() => setDatePickerVisible(true)} style={styles.dateButton}>

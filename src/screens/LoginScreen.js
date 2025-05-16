@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, Button, Alert } from "react-native";
+import { View, Text, TextInput, Alert, Image, StyleSheet, TouchableOpacity } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import httpApiClient from "../services";
 import * as Notifications from "expo-notifications";
@@ -59,25 +59,138 @@ const LoginScreen = ({ navigation }) => {
     }
   };
 
+  const handleGuestLogin = () => {
+    // TODO: Xử lý đăng nhập với tư cách khách (guest)
+    setIsLoggedIn(true); // Hoặc chuyển hướng tới màn hình guest
+  };
+
   return (
-    <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-      <Text>Đăng nhập</Text>
-      <TextInput
-        placeholder="Email"
-        value={email}
-        onChangeText={setEmail}
-        style={{ borderWidth: 1, width: 200, marginBottom: 10, padding: 5 }}
-      />
-      <TextInput
-        placeholder="Mật khẩu"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-        style={{ borderWidth: 1, width: 200, marginBottom: 10, padding: 5 }}
-      />
-      <Button title="Đăng nhập" onPress={handleLogin} />
+    <View style={styles.container}>
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', width: '100%' }}>
+        <Text style={styles.systemTitle}>Hệ thống quản lý</Text>
+        <Text style={styles.systemSubtitle}>Cảng Hàng Không Đồng Hới</Text>
+        <View style={styles.logoWrapper}>
+          <Image source={require("../../assets/LogoACV.png")} style={styles.logo} resizeMode="contain" />
+        </View>
+        <View style={styles.formBlock}>
+          <TextInput
+            placeholder="Email"
+            value={email}
+            onChangeText={setEmail}
+            style={styles.input}
+            autoCapitalize="none"
+            keyboardType="email-address"
+          />
+          <TextInput
+            placeholder="Mật khẩu"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+            style={styles.input}
+          />
+          <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
+            <Text style={styles.loginButtonText}>Đăng nhập</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.guestButton} onPress={handleGuestLogin}>
+            <Text style={styles.guestButtonText}>Đăng nhập với tư cách khách</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
     </View>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#f4f8fb",
+    paddingHorizontal: 24,
+    alignItems: "center",
+    justifyContent: "flex-start",
+  },
+  systemTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#1976D2",
+    marginTop: 60,
+    marginBottom: 0,
+    letterSpacing: 0.5,
+    textAlign: 'center',
+  },
+  systemSubtitle: {
+    fontSize: 16,
+    color: "#1565c0",
+    marginBottom: 24,
+    fontWeight: "500",
+    letterSpacing: 0.2,
+    textAlign: 'center',
+  },
+  logoWrapper: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 14,
+    marginBottom: 32,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 6,
+    elevation: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  logo: {
+    width: 220,
+    height: 90,
+    borderRadius: 16,
+  },
+  formBlock: {
+    width: '100%',
+    alignItems: 'center',
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: "#bdbdbd",
+    borderRadius: 8,
+    width: 260,
+    marginBottom: 14,
+    padding: 10,
+    backgroundColor: "#f9f9f9",
+    fontSize: 16,
+  },
+  loginButton: {
+    width: 260,
+    backgroundColor: '#1976D2',
+    borderRadius: 8,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginTop: 8,
+    marginBottom: 8,
+    shadowColor: '#1976D2',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  loginButtonText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+    letterSpacing: 0.5,
+  },
+  guestButton: {
+    width: 260,
+    backgroundColor: '#e3f2fd',
+    borderRadius: 8,
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginTop: 2,
+  },
+  guestButtonText: {
+    color: '#1976D2',
+    fontSize: 16,
+    fontWeight: '600',
+    letterSpacing: 0.2,
+  },
+});
 
 export default LoginScreen;

@@ -15,6 +15,7 @@ import { Ionicons } from "@expo/vector-icons";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import httpApiClient from "../services";
 import SelectModal from "../components/SelectModal";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // Hàm fetch tách biệt, KHÔNG gọi setUnits/setShifts trực tiếp.
 // Trả về { units, shifts } cho component.
@@ -45,6 +46,22 @@ const ApplyShiftScreen = () => {
   const [shifts, setShifts] = useState([]);
   const [selectedShiftCode, setSelectedShiftCode] = useState("");
   const [loadingUsers, setLoadingUsers] = useState(false);
+  const [userTeamId, setUserTeamId] = useState("");
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const userStr = await AsyncStorage.getItem("user");
+        if (userStr) {
+          const user = JSON.parse(userStr);
+          setUserTeamId(user.teamId ? user.teamId.toString() : "");
+          setSelectedTeam(user.teamId ? user.teamId.toString() : "");
+        }
+      } catch (e) {
+        setUserTeamId("");
+      }
+    })();
+  }, []);
 
   // 1) Fetch teams
   useEffect(() => {
@@ -229,14 +246,12 @@ const ApplyShiftScreen = () => {
   const ListHeader = () => (
     <View style={styles.headerContainer}>
       <Text style={styles.title}>Áp dụng ca làm việc</Text>
-      <SelectModal
-        label="Chọn Team"
-        data={teams.map(t => ({ label: t.teamName, value: t.id }))}
-        value={selectedTeam}
-        onChange={setSelectedTeam}
-        placeholder="Chọn Team"
-        title="Chọn Team"
-      />
+      <Text style={styles.label}>Team:</Text>
+      <View style={styles.dateButton}>
+        <Text style={styles.dateText}>
+          {teams.find(t => t.id.toString() === userTeamId)?.teamName || "(Không xác định)"}
+        </Text>
+      </View>
       <SelectModal
         label="Chọn Unit"
         data={units.map(u => ({ label: u.unitName, value: u.id }))}
@@ -244,7 +259,7 @@ const ApplyShiftScreen = () => {
         onChange={setSelectedUnit}
         placeholder="Chọn Unit"
         title="Chọn Unit"
-        disabled={!selectedTeam}
+        disabled={!userTeamId}
       />
       <Text style={styles.label}>Chọn ngày:</Text>
       <TouchableOpacity
@@ -264,7 +279,6 @@ const ApplyShiftScreen = () => {
         }}
         onCancel={() => setDatePickerVisible(false)}
       />
-
       <TouchableOpacity style={styles.primaryButton} onPress={handleSearchUsers}>
         <Ionicons name="search" size={20} color="white" style={{ marginRight: 6 }} />
         <Text style={styles.primaryButtonText}>Tìm kiếm nhân viên</Text>

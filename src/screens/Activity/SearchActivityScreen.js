@@ -13,6 +13,7 @@ import httpApiClient from "../../services";
 import { Calendar, CalendarProvider } from "react-native-calendars";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // Parse YYYY-MM-DD hoặc YYYY-MM-DDTHH:mm:ss thành Date local
 function parseLocalDate(str) {
@@ -113,6 +114,28 @@ export default function SearchActivityScreen({ navigation }) {
   const [isDatePickerVisible, setDatePickerVisible] = useState(false);
   const [weekRange, setWeekRange] = useState(getWeekRange(todayStr));
   const [loading, setLoading] = useState(true);
+  const [canEdit, setCanEdit] = useState(false);
+  const [canDelete, setCanDelete] = useState(false);
+  const [canPin, setCanPin] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const userStr = await AsyncStorage.getItem("user");
+        if (userStr) {
+          const user = JSON.parse(userStr);
+          const perms = user.permissions || [];
+          setCanEdit(perms.includes("CAN_EDIT_ACTIVITY"));
+          setCanDelete(perms.includes("CAN_DELETE_ACTIVITY"));
+          setCanPin(perms.includes("CAN_GHIM_ACTIVITY"));
+        }
+      } catch (e) {
+        setCanEdit(false);
+        setCanDelete(false);
+        setCanPin(false);
+      }
+    })();
+  }, []);
 
   // Format ngày hiển thị
   const formatDate = d => {
@@ -235,6 +258,42 @@ export default function SearchActivityScreen({ navigation }) {
   // Sửa
   const handleEdit = act => navigation.navigate("EditActivityScreen", { activity: act });
 
+  // Modal xác nhận ghim/bỏ ghim
+  const confirmPin = (act) => {
+    const isPinned = act.pinned === true;
+    const newPinned = !isPinned;
+    Alert.alert(
+      newPinned ? "Xác nhận ghim hoạt động" : "Xác nhận bỏ ghim hoạt động",
+      `${newPinned ? "Bạn muốn ghim hoạt động này?" : "Bạn muốn bỏ ghim hoạt động này?"}\n\nTên: ${act.name}\nChi tiết: ${act.notes || act.description || "Không có"}`,
+      [
+        { text: "Huỷ", style: "cancel" },
+        {
+          text: newPinned ? "Ghim" : "Bỏ ghim",
+          style: "destructive",
+          onPress: () => handlePin(act),
+        },
+      ]
+    );
+  };
+
+  // Ghim hoặc bỏ ghim activity
+  const handlePin = (act) => {
+    const isPinned = act.pinned === true;
+    const newPinned = !isPinned;
+    httpApiClient.put(`activities/${act.id}/pin?pinned=${newPinned}`)
+      .then(() => {
+        Alert.alert(
+          newPinned ? "Đã ghim hoạt động" : "Đã bỏ ghim hoạt động",
+          `Tên: ${act.name}\nChi tiết: ${act.notes || act.description || "Không có"}`
+        );
+        act.pinned = newPinned;
+        setAllActivities(prev => prev.map(a => a.id === act.id ? { ...a, pinned: newPinned } : a));
+      })
+      .catch(() => {
+        Alert.alert("Lỗi", "Không thể cập nhật trạng thái ghim");
+      });
+  };
+
   return (
     <Layout>
       <CalendarProvider date={selectedDate}>
@@ -330,14 +389,24 @@ export default function SearchActivityScreen({ navigation }) {
                         </View>
                       )}
                       <View style={styles.actionRow}>
-                        <TouchableOpacity style={[styles.actionBtn, styles.editBtn]} onPress={() => handleEdit(item)}>
-                          <Ionicons name="create-outline" size={20} color="#007AFF" />
-                          <Text style={styles.actionText}>Sửa</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={[styles.actionBtn, styles.deleteBtn]} onPress={() => handleDelete(item.id)}>
-                          <Ionicons name="trash-outline" size={20} color="#FF3B30" />
-                          <Text style={[styles.actionText, { color: "#FF3B30" }]}>Xóa</Text>
-                        </TouchableOpacity>
+                        {canEdit && (
+                          <TouchableOpacity style={[styles.actionBtn, styles.editBtn]} onPress={() => handleEdit(item)}>
+                            <Ionicons name="create-outline" size={20} color="#007AFF" />
+                            <Text className="actionText">Sửa</Text>
+                          </TouchableOpacity>
+                        )}
+                        {canDelete && (
+                          <TouchableOpacity style={[styles.actionBtn, styles.deleteBtn]} onPress={() => handleDelete(item.id)}>
+                            <Ionicons name="trash-outline" size={20} color="#FF3B30" />
+                            <Text style={[styles.actionText, { color: "#FF3B30" }]}>Xóa</Text>
+                          </TouchableOpacity>
+                        )}
+                        {canPin && (
+                          <TouchableOpacity style={[styles.actionBtn, { backgroundColor: item.pinned ? '#fffde7' : '#fffbe6', borderColor: item.pinned ? '#ffe082' : '#ffe58f' }]} onPress={() => confirmPin(item)}>
+                            <Ionicons name={item.pinned ? "star" : "star-outline"} size={20} color="#FFB300" />
+                            <Text style={[styles.actionText, { color: "#FFB300" }]}>{item.pinned ? "Bỏ ghim" : "Ghim"}</Text>
+                          </TouchableOpacity>
+                        )}
                       </View>
                       {isToday && (
                         <Text style={styles.todayLabel}>Hôm nay</Text>

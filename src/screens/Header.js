@@ -8,11 +8,13 @@ import {
   StatusBar,
   SafeAreaView,
   ActivityIndicator,
+  Image,
 } from "react-native";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { useAuth } from "../context/AuthContext";
+import Ionicons from "react-native-vector-icons/Ionicons";
 
 const BACKEND_URL = "http://10.0.10.32:8080";
 
@@ -138,10 +140,17 @@ const Header = () => {
         }}
       >
         {/* Logo: Bấm vào logo để về trang chủ */}
-        <TouchableOpacity onPress={() => navigation.navigate("Home")}>
-          <Text style={{ fontSize: 20, fontWeight: "bold", color: "#004080" }}>
+        <TouchableOpacity onPress={() => navigation.navigate("Home")}
+          style={{ flexDirection: 'row', alignItems: 'center' }}
+        >
+          <Image
+            source={require("../../assets/LogoDHA.png")}
+            style={{ width: 150, height: 80, resizeMode: 'contain', marginRight: 8 }}
+          />
+          {/* Nếu muốn giữ text bên cạnh logo, bỏ comment dòng dưới */}
+          {/* <Text style={{ fontSize: 20, fontWeight: "bold", color: "#004080" }}>
             Dong Hoi Airport
-          </Text>
+          </Text> */}
         </TouchableOpacity>
 
         {/* Bell & User Icon */}
@@ -296,32 +305,41 @@ const Header = () => {
               borderRadius: 10,
             }}
           >
-            <Text
-              style={{ fontSize: 18, fontWeight: "bold", marginBottom: 10 }}
-            >
-              Tài khoản
+            <Text style={{ fontSize: 20, fontWeight: "bold", marginBottom: 18, color: "#1976D2", textAlign: 'center', letterSpacing: 0.5 }}>
+              Quản lý tài khoản
             </Text>
             <TouchableOpacity
-              style={{ paddingVertical: 10 }}
+              style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 12 }}
               onPress={() => {
                 setUserModalVisible(false);
                 navigation.navigate("ProfileScreen");
               }}
             >
-              <Text>Thông tin cá nhân</Text>
+              <Ionicons name="person-circle-outline" size={24} color="#1976D2" style={{ marginRight: 12 }} />
+              <Text style={{ fontSize: 16, color: '#222' }}>Thông tin cá nhân</Text>
             </TouchableOpacity>
-
             <TouchableOpacity
-              style={{ paddingVertical: 10 }}
+              style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 12 }}
+              onPress={() => {
+                setUserModalVisible(false);
+                navigation.navigate("NotificationCenterScreen");
+              }}
+            >
+              <Ionicons name="notifications-outline" size={24} color="#1976D2" style={{ marginRight: 12 }} />
+              <Text style={{ fontSize: 16, color: '#222' }}>Trung tâm thông báo</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 12 }}
               onPress={handleLogout}
             >
-              <Text>Đăng xuất</Text>
+              <Ionicons name="log-out-outline" size={24} color="#FF3B30" style={{ marginRight: 12 }} />
+              <Text style={{ fontSize: 16, color: '#FF3B30' }}>Đăng xuất</Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => setUserModalVisible(false)}
-              style={{ marginTop: 15 }}
+              style={{ marginTop: 18 }}
             >
-              <Text style={{ color: "blue", textAlign: "center" }}>Đóng</Text>
+              <Text style={{ color: "#1976D2", textAlign: "center", fontWeight: '600', fontSize: 15 }}>Đóng</Text>
             </TouchableOpacity>
           </View>
         </View>

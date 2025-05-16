@@ -15,6 +15,7 @@ import { useNavigation } from "@react-navigation/native";
 import httpApiClient from "../services";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import SelectModal from "../components/SelectModal";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const SearchScheduleScreen = () => {
   // State cho ngày, team, unit
@@ -35,7 +36,31 @@ const SearchScheduleScreen = () => {
 
   const navigation = useNavigation();
 
-  // 1. Fetch danh sách Team
+  const [permissions, setPermissions] = useState([]);
+  const [userTeamId, setUserTeamId] = useState("");
+
+  // Lấy quyền và teamId từ user
+  useEffect(() => {
+    (async () => {
+      try {
+        const userStr = await AsyncStorage.getItem("user");
+        if (userStr) {
+          const user = JSON.parse(userStr);
+          setPermissions(user.permissions || []);
+          setUserTeamId(user.teamId ? user.teamId.toString() : "");
+          setSelectedTeam(user.teamId ? user.teamId.toString() : "");
+        }
+      } catch (e) {
+        setPermissions([]);
+        setUserTeamId("");
+      }
+    })();
+  }, []);
+
+  // Chỉ cho phép sửa/xóa nếu có đủ 2 quyền
+  const canEditAndDelete = permissions.includes("CAN_EDIT_SHIFT") && permissions.includes("CAN_DELETE_SHIFT");
+
+  // 1. Fetch danh sách Team (chỉ fetch để lấy tên team, không cho chọn team khác)
   useEffect(() => {
     const fetchTeams = async () => {
       try {
@@ -47,17 +72,16 @@ const SearchScheduleScreen = () => {
         Alert.alert("Error", "Unable to fetch teams");
       }
     };
-
     fetchTeams();
   }, []);
 
-  // 2. Khi chọn Team => fetch Unit
+  // 2. Khi userTeamId thay đổi => fetch Unit
   useEffect(() => {
-    if (selectedTeam) {
+    if (userTeamId) {
       setSelectedUnit("");
       setSearchResults([]);
       httpApiClient
-        .get(`units?teamId=${selectedTeam}`)
+        .get(`units?teamId=${userTeamId}`)
         .json()
         .then((data) => {
           if (data && Array.isArray(data.data)) {
@@ -74,7 +98,7 @@ const SearchScheduleScreen = () => {
       setUnits([]);
       setSearchResults([]);
     }
-  }, [selectedTeam]);
+  }, [userTeamId]);
 
   // Hiển thị modal DatePicker
   const showDatePicker = () => {
@@ -98,7 +122,7 @@ const SearchScheduleScreen = () => {
     hideDatePicker();
   };
 
-  // Hàm handleSearch
+  // Hàm handleSearch: chỉ search theo team của user
   const handleSearch = async () => {
     if (!shiftDate) {
       Alert.alert("Lỗi", "Vui lòng nhập ngày (YYYY-MM-DD)!");
@@ -108,15 +132,13 @@ const SearchScheduleScreen = () => {
       let url = "";
       if (scheduleType === "user-shifts") {
         url = `user-shifts/filter?shiftDate=${shiftDate}`;
-        if (selectedTeam) url += `&teamId=${selectedTeam}`;
+        if (userTeamId) url += `&teamId=${userTeamId}`;
         if (selectedUnit) url += `&unitId=${selectedUnit}`;
       } else {
-        // Đổi endpoint cho user-flight-shifts sang filter-schedules
         url = `user-flight-shifts/filter-schedules?shiftDate=${shiftDate}`;
-        if (selectedTeam) url += `&teamId=${selectedTeam}`;
+        if (userTeamId) url += `&teamId=${userTeamId}`;
         if (selectedUnit) url += `&unitId=${selectedUnit}`;
       }
-
       const data = await httpApiClient.get(url).json();
       setSearchResults(data.data || []);
     } catch (error) {
@@ -260,20 +282,24 @@ const SearchScheduleScreen = () => {
         </>
       )}
       <View style={styles.actionContainer}>
-        <TouchableOpacity
-          style={[styles.actionButton, { backgroundColor: "#007AFF" }]}
-          onPress={() => handleUpdate(item)}
-        >
-          <Ionicons name="create-outline" size={20} color="white" />
-          <Text style={styles.actionButtonText}>Sửa</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.actionButton, { backgroundColor: "#FF3B30", marginTop: 8 }]}
-          onPress={() => handleDelete(item)}
-        >
-          <Ionicons name="trash-outline" size={20} color="white" />
-          <Text style={styles.actionButtonText}>Xóa</Text>
-        </TouchableOpacity>
+        {canEditAndDelete && (
+          <>
+            <TouchableOpacity
+              style={[styles.actionButton, { backgroundColor: "#007AFF" }]}
+              onPress={() => handleUpdate(item)}
+            >
+              <Ionicons name="create-outline" size={20} color="white" />
+              <Text style={styles.actionButtonText}>Sửa</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.actionButton, { backgroundColor: "#FF3B30", marginTop: 8 }]}
+              onPress={() => handleDelete(item)}
+            >
+              <Ionicons name="trash-outline" size={20} color="white" />
+              <Text style={styles.actionButtonText}>Xóa</Text>
+            </TouchableOpacity>
+          </>
+        )}
       </View>
     </View>
   );
@@ -311,14 +337,12 @@ const SearchScheduleScreen = () => {
           </View>
         </TouchableOpacity>
 
-        <Text style={styles.label}>Chọn Team (ID):</Text>
-        <SelectModal
-          data={teams.map(t => ({ label: t.teamName, value: t.id.toString() }))}
-          value={selectedTeam}
-          onChange={setSelectedTeam}
-          placeholder="(Chọn Team)"
-          title="Chọn Team"
-        />
+        <Text style={styles.label}>Team:</Text>
+        <View style={styles.input}>
+          <Text style={{ color: '#222' }}>
+            {teams.find(t => t.id.toString() === userTeamId)?.teamName || "(Không xác định)"}
+          </Text>
+        </View>
         <Text style={styles.label}>Chọn Unit (ID):</Text>
         <SelectModal
           data={units.map(u => ({ label: u.unitName, value: u.id.toString() }))}

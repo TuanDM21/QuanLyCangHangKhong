@@ -3,9 +3,27 @@ import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import Layout from "../Layout";
 import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const ActivityScreen = () => {
   const navigation = useNavigation();
+  const [permissions, setPermissions] = React.useState([]);
+
+  React.useEffect(() => {
+    (async () => {
+      try {
+        const userStr = await AsyncStorage.getItem("user");
+        if (userStr) {
+          const user = JSON.parse(userStr);
+          setPermissions(user.permissions || []);
+        }
+      } catch (e) {
+        setPermissions([]);
+      }
+    })();
+  }, []);
+
+  const hasPermission = (perm) => Array.isArray(permissions) && permissions.includes(perm);
 
   return (
     <Layout>
@@ -14,13 +32,15 @@ const ActivityScreen = () => {
         
         <View style={styles.menu}>
           {/* Tạo hoạt động */}
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={() => navigation.navigate("CreateActivityScreen")}
-          >
-            <Ionicons name="add-circle-outline" size={40} color="white" />
-            <Text style={styles.menuText}>Tạo hoạt động</Text>
-          </TouchableOpacity>
+          {hasPermission("CAN_CREATE_ACTIVITY") && (
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => navigation.navigate("CreateActivityScreen")}
+            >
+              <Ionicons name="add-circle-outline" size={40} color="white" />
+              <Text style={styles.menuText}>Tạo hoạt động</Text>
+            </TouchableOpacity>
+          )}
 
           {/* Hoạt động của tôi */}
           <TouchableOpacity

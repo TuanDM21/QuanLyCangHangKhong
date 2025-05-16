@@ -3,9 +3,27 @@ import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import Layout from "./Layout"; 
 import { useNavigation } from "@react-navigation/native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const FlightScreen = () => {
   const navigation = useNavigation();
+  const [permissions, setPermissions] = React.useState([]);
+
+  React.useEffect(() => {
+    (async () => {
+      try {
+        const userStr = await AsyncStorage.getItem("user");
+        if (userStr) {
+          const user = JSON.parse(userStr);
+          setPermissions(user.permissions || []);
+        }
+      } catch (e) {
+        setPermissions([]);
+      }
+    })();
+  }, []);
+
+  const hasPermission = (perm) => Array.isArray(permissions) && permissions.includes(perm);
 
   return (
     <Layout>
@@ -14,13 +32,15 @@ const FlightScreen = () => {
         
         <View style={styles.menu}>
           {/* Tạo chuyến bay */}
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={() => navigation.navigate("CreateFlightScreen")}
-          >
-            <Ionicons name="airplane-outline" size={40} color="white" />
-            <Text style={styles.menuText}>Tạo chuyến bay</Text>
-          </TouchableOpacity>
+          {hasPermission("CAN_CREATE_FLIGHT") && (
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => navigation.navigate("CreateFlightScreen")}
+            >
+              <Ionicons name="airplane-outline" size={40} color="white" />
+              <Text style={styles.menuText}>Tạo chuyến bay</Text>
+            </TouchableOpacity>
+          )}
 
           {/* Danh sách chuyến bay */}
           <TouchableOpacity

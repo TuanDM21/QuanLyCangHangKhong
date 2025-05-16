@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import {
   View,
   Text,
@@ -12,11 +12,30 @@ import { Ionicons } from "@expo/vector-icons";
 import Layout from "./Layout";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import httpApiClient from "../services";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const ScheduleListScreen = () => {
   const [schedules, setSchedules] = useState([]);
   const [searchText, setSearchText] = useState("");
+  const [permissions, setPermissions] = useState([]);
   const navigation = useNavigation();
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const userStr = await AsyncStorage.getItem("user");
+        if (userStr) {
+          const user = JSON.parse(userStr);
+          setPermissions(user.permissions || []);
+        }
+      } catch (e) {
+        setPermissions([]);
+      }
+    })();
+  }, []);
+
+  const canEdit = permissions.includes("CAN_EDIT_SHIFT");
+  const canDelete = permissions.includes("CAN_DELETE_SHIFT");
 
   // Chỉ fetch ca trực
   const fetchSchedules = async () => {
@@ -82,20 +101,24 @@ const ScheduleListScreen = () => {
       <Text style={styles.text}>📍 {item.location}</Text>
       <Text style={styles.text}>📝 {item.description}</Text>
       <View style={styles.buttonContainer}>
-        <TouchableOpacity
-          style={[styles.button, styles.updateButton]}
-          onPress={() => handleUpdate(item)}
-        >
-          <Ionicons name="create-outline" size={20} color="white" />
-          <Text style={styles.buttonText}>Cập nhật</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.button, styles.deleteButton]}
-          onPress={() => handleDelete(item)}
-        >
-          <Ionicons name="trash-outline" size={20} color="white" />
-          <Text style={styles.buttonText}>Xóa</Text>
-        </TouchableOpacity>
+        {canEdit && (
+          <TouchableOpacity
+            style={[styles.button, styles.updateButton]}
+            onPress={() => handleUpdate(item)}
+          >
+            <Ionicons name="create-outline" size={20} color="white" />
+            <Text style={styles.buttonText}>Cập nhật</Text>
+          </TouchableOpacity>
+        )}
+        {canDelete && (
+          <TouchableOpacity
+            style={[styles.button, styles.deleteButton]}
+            onPress={() => handleDelete(item)}
+          >
+            <Ionicons name="trash-outline" size={20} color="white" />
+            <Text style={styles.buttonText}>Xóa</Text>
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );

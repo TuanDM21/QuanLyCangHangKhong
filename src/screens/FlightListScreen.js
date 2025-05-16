@@ -15,11 +15,13 @@ import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import Layout from "./Layout";
 import httpApiClient from "../services";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const FlightListScreen = () => {
   const navigation = useNavigation();
   const [flights, setFlights] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [canEditTime, setCanEditTime] = useState(false);
 
   // Modal controls
   const [modalVisible, setModalVisible] = useState(false);
@@ -35,6 +37,18 @@ const FlightListScreen = () => {
   const liveAnim = React.useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
+    (async () => {
+      try {
+        const userStr = await AsyncStorage.getItem("user");
+        if (userStr) {
+          const user = JSON.parse(userStr);
+          const perms = user.permissions || [];
+          setCanEditTime(perms.includes("CAN_EDIT_TIME_FLIGHT"));
+        }
+      } catch (e) {
+        setCanEditTime(false);
+      }
+    })();
     fetchFlights();
     // Lặp animation nhấp nháy
     Animated.loop(
@@ -59,9 +73,11 @@ const FlightListScreen = () => {
     try {
       const res = await httpApiClient.get("flights/today");
       const flightsJson = await res.json();
-      setFlights(flightsJson.data);
+      // Đảm bảo luôn là mảng, tránh lỗi undefined
+      setFlights(Array.isArray(flightsJson.data) ? flightsJson.data : []);
     } catch (error) {
       Alert.alert("Lỗi", error.message);
+      setFlights([]); // fallback an toàn
     } finally {
       setLoading(false);
     }
@@ -216,20 +232,24 @@ const confirmSendNotification = async () => {
             Cất cánh thực tế tại {item.departureAirport?.airportCode ?? "Chưa xác định"}:
           </Text>
           <Text style={styles.timeValue}>{formatTime(item.actualDepartureTime)}</Text>
-          <TouchableOpacity style={styles.updateBtn} onPress={() => handleOpenModal(item.id, "actualDepartureTime")}> 
-            <Ionicons name="create-outline" size={18} color="#fff" />
-          </TouchableOpacity>
+          {canEditTime && (
+            <TouchableOpacity style={styles.updateBtn} onPress={() => handleOpenModal(item.id, "actualDepartureTime")}> 
+              <Ionicons name="create-outline" size={18} color="#fff" />
+            </TouchableOpacity>
+          )}
         </View>
         <View style={styles.timeRow}>
           <Ionicons name="airplane" size={18} color="#28a745" style={{marginRight: 4}} />
           <Text style={styles.label}>
-            Hạ cánh thực tế tại {item.arrivalAirport?.airportCode ?? "Chưa xác định"}:
+            Hạ cánh dự kiến tại {item.arrivalAirport?.airportCode ?? "Chưa xác định"}:
           </Text>
           <Text style={styles.timeValue}>{formatTime(item.actualArrivalTime)}</Text>
-          <TouchableOpacity style={styles.updateBtn} onPress={() => handleOpenModal(item.id, "actualArrivalTime")}> 
-            <Ionicons name="create-outline" size={18} color="#fff" />
-          </TouchableOpacity>
-          {item.actualArrivalTime && formatTime(item.actualArrivalTime) !== "00:00" && (
+          {canEditTime && (
+            <TouchableOpacity style={styles.updateBtn} onPress={() => handleOpenModal(item.id, "actualArrivalTime")}> 
+              <Ionicons name="create-outline" size={18} color="#fff" />
+            </TouchableOpacity>
+          )}
+          {canEditTime && item.actualArrivalTime && formatTime(item.actualArrivalTime) !== "00:00" && (
             <TouchableOpacity style={styles.bellBtn} onPress={() => handleSendNotification(item.id, "actualArrivalTime")} disabled={notifiedFlights[`${item.id}_actualArrivalTime`]}> 
               <MaterialIcons name="notifications-active" size={24} color={notifiedFlights[`${item.id}_actualArrivalTime`] ? "#bdbdbd" : "#28a745"} />
             </TouchableOpacity>
@@ -241,10 +261,12 @@ const confirmSendNotification = async () => {
             Cất cánh thực tế tại {item.arrivalAirport?.airportCode ?? "Chưa xác định"}:
           </Text>
           <Text style={styles.timeValue}>{formatTime(item.actualDepartureTimeAtArrival)}</Text>
-          <TouchableOpacity style={styles.updateBtn} onPress={() => handleOpenModal(item.id, "actualDepartureTimeAtArrival")}> 
-            <Ionicons name="create-outline" size={18} color="#fff" />
-          </TouchableOpacity>
-          {item.actualDepartureTimeAtArrival && formatTime(item.actualDepartureTimeAtArrival) !== "00:00" && (
+          {canEditTime && (
+            <TouchableOpacity style={styles.updateBtn} onPress={() => handleOpenModal(item.id, "actualDepartureTimeAtArrival")}> 
+              <Ionicons name="create-outline" size={18} color="#fff" />
+            </TouchableOpacity>
+          )}
+          {canEditTime && item.actualDepartureTimeAtArrival && formatTime(item.actualDepartureTimeAtArrival) !== "00:00" && (
             <TouchableOpacity style={styles.bellBtn} onPress={() => handleSendNotification(item.id, "actualDepartureTimeAtArrival")} disabled={notifiedFlights[`${item.id}_actualDepartureTimeAtArrival`]}> 
               <MaterialIcons name="notifications-active" size={24} color={notifiedFlights[`${item.id}_actualDepartureTimeAtArrival`] ? "#bdbdbd" : "#28a745"} />
             </TouchableOpacity>
@@ -310,9 +332,11 @@ const confirmSendNotification = async () => {
                 onChangeText={setNewTime}
               />
               <View style={styles.modalButtonRow}>
-                <TouchableOpacity style={styles.saveBtn} onPress={updateTime}>
-                  <Text style={styles.btnText}>Lưu</Text>
-                </TouchableOpacity>
+                {canEditTime && (
+                  <TouchableOpacity style={styles.saveBtn} onPress={updateTime}>
+                    <Text style={styles.btnText}>Lưu</Text>
+                  </TouchableOpacity>
+                )}
                 <TouchableOpacity
                   style={styles.cancelBtn}
                   onPress={() => setModalVisible(false)}
@@ -335,9 +359,11 @@ const confirmSendNotification = async () => {
             <View style={styles.modalContainer}>
               <Text style={styles.modalTitle}>Gửi thông báo cho nhân viên?</Text>
               <View style={styles.modalButtonRow}>
-                <TouchableOpacity style={styles.saveBtn} onPress={confirmSendNotification}>
-                  <Text style={styles.btnText}>Gửi</Text>
-                </TouchableOpacity>
+                {canEditTime && (
+                  <TouchableOpacity style={styles.saveBtn} onPress={confirmSendNotification}>
+                    <Text style={styles.btnText}>Gửi</Text>
+                  </TouchableOpacity>
+                )}
                 <TouchableOpacity
                   style={styles.cancelBtn}
                   onPress={() => setNotifyDialog({ visible: false, flightId: null, field: "" })}
