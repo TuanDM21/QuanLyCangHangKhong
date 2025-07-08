@@ -3,7 +3,7 @@ import { View, Text, FlatList, ActivityIndicator, StyleSheet, TouchableOpacity }
 import { Ionicons } from "@expo/vector-icons";
 import httpApiClient from "../../services";
 import { Calendar } from "react-native-calendars";
-import Layout from "../Layout";
+import Layout from "../Common/Layout";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 
 // Hàm lấy ngày đầu tuần (Thứ 2) và cuối tuần (Chủ nhật) từ một ngày bất kỳ

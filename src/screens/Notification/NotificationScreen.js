@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { View, Text, FlatList, TouchableOpacity, StyleSheet } from "react-native";
-import { getNotifications, markNotificationAsRead } from "../ultis/notificationStorage";
+import { getNotifications, markNotificationAsRead } from "../../ultis/notificationStorage";
 
 const NotificationScreen = () => {
   const [notifications, setNotifications] = useState([]);

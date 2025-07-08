@@ -1,9 +1,9 @@
 import React, { useState } from "react";
 import { View, Text, TextInput, Alert, Image, StyleSheet, TouchableOpacity } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import httpApiClient from "../services";
+import httpApiClient from "../../services";
 import * as Notifications from "expo-notifications";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../../context/AuthContext";
 
 const LoginScreen = ({ navigation }) => {
   const [email, setEmail] = useState("");
@@ -70,7 +70,7 @@ const LoginScreen = ({ navigation }) => {
         <Text style={styles.systemTitle}>Hệ thống quản lý</Text>
         <Text style={styles.systemSubtitle}>Cảng Hàng Không Đồng Hới</Text>
         <View style={styles.logoWrapper}>
-          <Image source={require("../../assets/LogoACV.png")} style={styles.logo} resizeMode="contain" />
+          <Image source={require("../../../assets/LogoACV.png")} style={styles.logo} resizeMode="contain" />
         </View>
         <View style={styles.formBlock}>
           <TextInput

@@ -13,8 +13,8 @@ import {
 } from "react-native";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
-import Layout from "./Layout";
-import httpApiClient from "../services";
+import Layout from "../Common/Layout";
+import httpApiClient from "../../services";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const FlightListScreen = () => {

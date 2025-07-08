@@ -13,7 +13,7 @@ import {
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../../context/AuthContext";
 import Ionicons from "react-native-vector-icons/Ionicons";
 
 const BACKEND_URL = "http://10.0.10.32:8080";
@@ -144,7 +144,7 @@ const Header = () => {
           style={{ flexDirection: 'row', alignItems: 'center' }}
         >
           <Image
-            source={require("../../assets/LogoDHA.png")}
+            source={require("../../../assets/LogoACV.png")}
             style={{ width: 150, height: 80, resizeMode: 'contain', marginRight: 8 }}
           />
           {/* Nếu muốn giữ text bên cạnh logo, bỏ comment dòng dưới */}

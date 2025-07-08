@@ -13,7 +13,7 @@ import {
   Platform,
 } from "react-native";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
-import Layout from "../Layout";
+import Layout from "../Common/Layout";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { Picker } from "@react-native-picker/picker";
 import httpApiClient from "../../services";

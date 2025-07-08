@@ -9,9 +9,9 @@ import {
   Button 
 } from "react-native";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
-import Layout from "./Layout";
+import Layout from "../Common/Layout";
 import { useNavigation } from "@react-navigation/native";
-import httpApiClient from "../services";
+import httpApiClient from "../../services";
 
 const CreateScheduleScreen = () => {
   const navigation = useNavigation();

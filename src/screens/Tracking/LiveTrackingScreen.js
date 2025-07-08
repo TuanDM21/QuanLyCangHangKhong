@@ -13,9 +13,9 @@ import {
 import MapView, { Marker, Polyline } from "react-native-maps";
 import { Ionicons } from "@expo/vector-icons";
 import { useRoute } from "@react-navigation/native";
-import Layout from "./Layout";
-import httpApiClient from "../services";
-import FlightInfoPanel from '../components/FlightInfoPanel';
+import Layout from "../Common/Layout";
+import httpApiClient from "../../services";
+import FlightInfoPanel from '../../components/FlightInfoPanel';
 
 // Hàm makeBezier đã bị thiếu, cần bổ sung lại
 function makeBezier(P0, P1, segments = 100, offsetLon = 1.5) {

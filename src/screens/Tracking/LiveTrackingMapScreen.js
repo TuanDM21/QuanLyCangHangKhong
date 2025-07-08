@@ -2,9 +2,9 @@ import React, { useEffect, useState, useMemo } from "react";
 import { View, Text, ActivityIndicator, StyleSheet, Alert } from "react-native";
 import MapView, { Marker, Polyline } from "react-native-maps";
 import { Ionicons } from "@expo/vector-icons";
-import Layout from "./Layout";
-import httpApiClient from "../services";
-import FlightInfoPanel from '../components/FlightInfoPanel';
+import Layout from "../Common/Layout";
+import httpApiClient from "../../services";
+import FlightInfoPanel from '../../components/FlightInfoPanel';
 
 const LiveTrackingMapScreen = () => {
   const [flights, setFlights] = useState([]);

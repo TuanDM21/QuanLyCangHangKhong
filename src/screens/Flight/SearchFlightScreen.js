@@ -11,10 +11,10 @@ import {
   Button,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import Layout from "./Layout";
+import Layout from "../Common/Layout";
 import { useNavigation } from "@react-navigation/native";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
-import httpApiClient from "../services";
+import httpApiClient from "../../services";
 
 // Hàm định dạng Date thành chuỗi "YYYY-MM-DD"
 const formatDate = (date) => {

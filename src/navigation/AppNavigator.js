@@ -3,33 +3,50 @@ import { createStackNavigator } from "@react-navigation/stack";
 import { NavigationContainer } from "@react-navigation/native";
 import { useAuth } from "../context/AuthContext";
 
-import LoginScreen from "../screens/LoginScreen";
-import HomeScreen from "../screens/HomeScreen";
-import ScheduleScreen from "../screens/ScheduleScreen";
-import CreateScheduleScreen from "../screens/CreateScheduleScreen";
-import UpdateScheduleScreen from "../screens/UpdateScheduleScreen";
-import ScheduleListScreen from "../screens/ScheduleListScreen";
-import ProfileScreen from "../screens/ProfileScreen";
-import SearchScheduleScreen from "../screens/SearchScheduleScreen";
-import ApplyShiftScreen from "../screens/ApplyShiftScreen";
-import UpdateUserShiftScreen from "../screens/UpdateUserShiftScreen";
-import FlightScreen from "../screens/FlightScreen";
-import CreateFlightScreen from "../screens/CreateFlightScreen";
-import FlightListScreen from "../screens/FlightListScreen";
-import SearchFlightScreen from "../screens/SearchFlightScreen";
-import UpdateFlightScreen from "../screens/UpdateFlightScreen";
-import LiveTrackingScreen from "../screens/LiveTrackingScreen";
-import ApplyFlightShiftScreen from "../screens/ApplyFlightShiftScreen";
+// Auth screens
+import LoginScreen from "../screens/Auth/LoginScreen";
+
+// Common screens
+import HomeScreen from "../screens/Common/HomeScreen";
+
+// Schedule screens
+import ScheduleScreen from "../screens/Schedule/ScheduleScreen";
+import CreateScheduleScreen from "../screens/Schedule/CreateScheduleScreen";
+import UpdateScheduleScreen from "../screens/Schedule/UpdateScheduleScreen";
+import ScheduleListScreen from "../screens/Schedule/ScheduleListScreen";
+import SearchScheduleScreen from "../screens/Schedule/SearchScheduleScreen";
+
+// Profile screens
+import ProfileScreen from "../screens/Profile/ProfileScreen";
+
+// Shift screens
+import ApplyShiftScreen from "../screens/Shift/ApplyShiftScreen";
+import UpdateUserShiftScreen from "../screens/Shift/UpdateUserShiftScreen";
+import MyShiftScreen from "../screens/Shift/MyShiftScreen";
+import UpdateUserFlightShiftScreen from "../screens/Shift/UpdateUserFlightShiftScreen";
+
+// Flight screens
+import FlightScreen from "../screens/Flight/FlightScreen";
+import CreateFlightScreen from "../screens/Flight/CreateFlightScreen";
+import FlightListScreen from "../screens/Flight/FlightListScreen";
+import SearchFlightScreen from "../screens/Flight/SearchFlightScreen";
+import UpdateFlightScreen from "../screens/Flight/UpdateFlightScreen";
+import ApplyFlightShiftScreen from "../screens/Flight/ApplyFlightShiftScreen";
+
+// Tracking screens
+import LiveTrackingScreen from "../screens/Tracking/LiveTrackingScreen";
+import LiveTrackingMapScreen from "../screens/Tracking/LiveTrackingMapScreen";
+
+// Activity screens
 import CreateActivityScreen from "../screens/Activity/CreateActivityScreen";
 import ActivityScreen from "../screens/Activity/ActivityScreen";
 import SearchActivityScreen from "../screens/Activity/SearchActivityScreen";
 import EditActivityScreen from "../screens/Activity/EditActivityScreen";
 import MyActivitiesScreen from "../screens/Activity/MyActivitiesScreen";
-import NotificationScreen from "../screens/NotificationScreen";
-import UpdateUserFlightShiftScreen from "../screens/UpdateUserFlightShiftScreen";
-import LiveTrackingMapScreen from "../screens/LiveTrackingMapScreen";
-import MyShiftScreen from "../screens/MyShiftScreen";
-import NotificationCenterScreen from "../screens/NotificationCenterScreen";
+
+// Notification screens
+import NotificationScreen from "../screens/Notification/NotificationScreen";
+import NotificationCenterScreen from "../screens/Notification/NotificationCenterScreen";
 
 const Stack = createStackNavigator();
 

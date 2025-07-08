@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { View, Text, FlatList, StyleSheet, ActivityIndicator } from "react-native";
 import Layout from "./Layout";
-import httpApiClient from "../services";
+import httpApiClient from "../../services";
 
 const NewsItem = ({ title, content, date }) => (
   <View style={styles.card}>

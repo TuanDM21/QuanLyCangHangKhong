@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet, Image, ActivityIndicator } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import Layout from "./Layout";
+import Layout from "../Common/Layout";
 
 const ProfileScreen = () => {
   const [user, setUser] = useState(null);

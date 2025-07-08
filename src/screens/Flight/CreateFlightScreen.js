@@ -12,11 +12,11 @@ import {
   Platform,
 } from "react-native";
 import { Picker } from "@react-native-picker/picker";
-import Layout from "./Layout";
+import Layout from "../Common/Layout";
 import { useNavigation } from "@react-navigation/native";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
-import httpApiClient from "../services";
-import SelectModal from "../components/SelectModal";
+import httpApiClient from "../../services";
+import SelectModal from "../../components/SelectModal";
 
 /** Utility để format Date thành chuỗi **/
 function formatTime(date) {

@@ -9,12 +9,12 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { Picker } from "@react-native-picker/picker";
-import Layout from "./Layout";
+import Layout from "../Common/Layout";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
-import httpApiClient from "../services";
+import httpApiClient from "../../services";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
-import SelectModal from "../components/SelectModal";
+import SelectModal from "../../components/SelectModal";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const SearchScheduleScreen = () => {

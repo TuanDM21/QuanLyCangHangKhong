@@ -14,9 +14,9 @@ import {
 import { Picker } from "@react-native-picker/picker";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
-import Layout from "./Layout";
-import httpApiClient from "../services";
-import SelectModal from "../components/SelectModal";
+import Layout from "../Common/Layout";
+import httpApiClient from "../../services";
+import SelectModal from "../../components/SelectModal";
 
 const UpdateFlightScreen = () => {
   const navigation = useNavigation();

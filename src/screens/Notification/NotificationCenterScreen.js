@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { View, Text, FlatList, TouchableOpacity, StyleSheet } from "react-native";
-import httpApiClient from "../services";
-import Layout from "./Layout";
+import httpApiClient from "../../services";
+import Layout from "../Common/Layout";
 
 export default function NotificationCenterScreen() {
   const [notifications, setNotifications] = useState([]);

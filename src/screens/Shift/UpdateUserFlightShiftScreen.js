@@ -8,11 +8,11 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { Picker } from "@react-native-picker/picker";
-import Layout from "./Layout";
+import Layout from "../Common/Layout";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
-import httpApiClient from "../services";
+import httpApiClient from "../../services";
 import { useNavigation, useRoute } from "@react-navigation/native";
-import SelectModal from "../components/SelectModal";
+import SelectModal from "../../components/SelectModal";
 
 const UpdateUserFlightShiftScreen = () => {
   const navigation = useNavigation();

@@ -9,9 +9,9 @@ import {
   Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import Layout from "./Layout";
+import Layout from "../Common/Layout";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
-import httpApiClient from "../services";
+import httpApiClient from "../../services";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const ScheduleListScreen = () => {

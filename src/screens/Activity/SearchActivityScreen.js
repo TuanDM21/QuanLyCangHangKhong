@@ -8,7 +8,7 @@ import {
   Alert,
   ActivityIndicator,
 } from "react-native";
-import Layout from "../Layout";
+import Layout from "../Common/Layout";
 import httpApiClient from "../../services";
 import { Calendar, CalendarProvider } from "react-native-calendars";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
