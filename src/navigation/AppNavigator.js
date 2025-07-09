@@ -15,6 +15,7 @@ import CreateScheduleScreen from "../screens/Schedule/CreateScheduleScreen";
 import UpdateScheduleScreen from "../screens/Schedule/UpdateScheduleScreen";
 import ScheduleListScreen from "../screens/Schedule/ScheduleListScreen";
 import SearchScheduleScreen from "../screens/Schedule/SearchScheduleScreen";
+import MyScheduleScreen from "../screens/Schedule/MyScheduleScreen";
 
 // Profile screens
 import ProfileScreen from "../screens/Profile/ProfileScreen";
@@ -84,10 +85,12 @@ const AppNavigator = () => {
             <Stack.Screen name="EditActivityScreen" component={EditActivityScreen} />
             <Stack.Screen name="MyActivitiesScreen" component={MyActivitiesScreen} />
             <Stack.Screen name="NotificationScreen" component={NotificationScreen} />
+            <Stack.Screen name="MyScheduleScreen" component={MyScheduleScreen} />
             <Stack.Screen name="UpdateUserFlightShiftScreen" component={UpdateUserFlightShiftScreen} />
             <Stack.Screen name="LiveTrackingMapScreen" component={LiveTrackingMapScreen} />
             <Stack.Screen name="MyShiftScreen" component={MyShiftScreen} />
             <Stack.Screen name="NotificationCenterScreen" component={NotificationCenterScreen} />
+            
 
             
           </>
