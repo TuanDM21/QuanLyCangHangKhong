@@ -9,6 +9,8 @@ import {
   SafeAreaView,
   ActivityIndicator,
   Image,
+  StyleSheet,
+  Dimensions,
 } from "react-native";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -16,7 +18,10 @@ import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { useAuth } from "../../context/AuthContext";
 import Ionicons from "react-native-vector-icons/Ionicons";
 
+const { width } = Dimensions.get('window');
+
 const BACKEND_URL = "http://10.0.10.32:8080";
+// const BACKEND_URL = "http://192.168.1.17:8080";
 
 const Header = () => {
   const [notificationModalVisible, setNotificationModalVisible] = useState(false);
@@ -125,227 +130,539 @@ const Header = () => {
   };
 
   return (
-    <SafeAreaView style={{ backgroundColor: "white" }}>
-      <View
-        style={{
-          flexDirection: "row",
-          justifyContent: "space-between",
-          alignItems: "center",
-          paddingTop: StatusBar.currentHeight || 10,
-          paddingHorizontal: 15,
-          height: 60,
-          backgroundColor: "white",
-          borderBottomWidth: 1,
-          borderBottomColor: "#ddd",
-        }}
-      >
-        {/* Logo: Bấm vào logo để về trang chủ */}
-        <TouchableOpacity onPress={() => navigation.navigate("Home")}
-          style={{ flexDirection: 'row', alignItems: 'center' }}
+    <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle="light-content" backgroundColor="#1E3A8A" />
+      <View style={styles.headerContainer}>
+        {/* Logo Section - ACV Dong Hoi Airport Text Design */}
+        <TouchableOpacity 
+          onPress={() => navigation.navigate("Home")}
+          style={styles.logoContainer}
+          activeOpacity={0.8}
         >
-          <Image
-            source={require("../../../assets/LogoACV.png")}
-            style={{ width: 150, height: 80, resizeMode: 'contain', marginRight: 8 }}
-          />
-          {/* Nếu muốn giữ text bên cạnh logo, bỏ comment dòng dưới */}
-          {/* <Text style={{ fontSize: 20, fontWeight: "bold", color: "#004080" }}>
-            Dong Hoi Airport
-          </Text> */}
+          <View style={styles.logoDesign}>
+            <View style={styles.acvBrand}>
+              {/* First Line: ACV */}
+              <Text style={styles.acvMainText}>ACV</Text>
+              
+              {/* Second Line: Company Info */}
+              <View style={styles.companyInfo}>
+                <Text style={styles.companyVietText}>CẢNG HÀNG KHÔNG ĐÔNG HÓI</Text>
+                <View style={styles.dividerLine} />
+                <Text style={styles.companyEngText}>DONG HOI AIRPORT</Text>
+              </View>
+            </View>
+          </View>
         </TouchableOpacity>
 
-        {/* Bell & User Icon */}
-        <View style={{ flexDirection: "row", alignItems: "center" }}>
-          {/* Bell Icon */}
+        {/* Actions Section */}
+        <View style={styles.actionsContainer}>
+          {/* Notification Bell */}
           <TouchableOpacity
             onPress={() => setNotificationModalVisible(true)}
-            style={{ marginRight: 15 }}
+            style={styles.actionButton}
+            activeOpacity={0.8}
           >
-            <MaterialIcons name="notifications" size={28} color="#ffcc00" />
-            {unreadCount > 0 && (
-              <View
-                style={{
-                  position: "absolute",
-                  right: -2,
-                  top: -2,
-                  backgroundColor: "red",
-                  width: 18,
-                  height: 18,
-                  borderRadius: 9,
-                  justifyContent: "center",
-                  alignItems: "center",
-                }}
-              >
-                <Text
-                  style={{ color: "white", fontSize: 12, fontWeight: "bold" }}
-                >
-                  {unreadCount}
-                </Text>
-              </View>
-            )}
+            <View style={[styles.iconContainer, styles.notificationButton]}>
+              <Ionicons name="notifications" size={22} color="#FFFFFF" />
+              {unreadCount > 0 && (
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </Text>
+                </View>
+              )}
+            </View>
           </TouchableOpacity>
 
-          {/* User Icon */}
-          <TouchableOpacity onPress={() => setUserModalVisible(true)}>
-            <MaterialIcons name="person" size={28} color="#007bff" />
+          {/* User Profile */}
+          <TouchableOpacity 
+            onPress={() => setUserModalVisible(true)}
+            style={styles.actionButton}
+            activeOpacity={0.8}
+          >
+            <View style={[styles.iconContainer, styles.profileButton]}>
+              <Ionicons name="person" size={22} color="#FFFFFF" />
+            </View>
           </TouchableOpacity>
         </View>
       </View>
 
-      {/* Modal hiển thị thông báo */}
+      {/* Notification Modal */}
       <Modal
         visible={notificationModalVisible}
         animationType="slide"
         transparent={true}
       >
-        <View
-          style={{
-            flex: 1,
-            justifyContent: "center",
-            backgroundColor: "rgba(0,0,0,0.5)",
-          }}
-        >
-          <View
-            style={{
-              backgroundColor: "white",
-              margin: 20,
-              padding: 20,
-              borderRadius: 10,
-              maxHeight: "80%",
-            }}
-          >
-            <Text
-              style={{ fontSize: 18, fontWeight: "bold", marginBottom: 10 }}
-            >
-              Thông báo
-            </Text>
+        <View style={styles.modalOverlay}>
+          <View style={styles.notificationModal}>
+            <View style={styles.modalHeader}>
+              <View style={styles.modalTitleContainer}>
+                <View style={styles.modalIconContainer}>
+                  <Ionicons name="notifications" size={24} color="#F59E0B" />
+                </View>
+                <Text style={styles.modalTitle}>Thông báo</Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => setNotificationModalVisible(false)}
+                style={styles.closeButton}
+              >
+                <Ionicons name="close" size={24} color="#6B7280" />
+              </TouchableOpacity>
+            </View>
+
             {loading ? (
-              <ActivityIndicator size="large" color="#007bff" />
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#007AFF" />
+                <Text style={styles.loadingText}>Đang tải thông báo...</Text>
+              </View>
             ) : (
               <FlatList
                 data={notifications}
                 renderItem={({ item }) => (
-                  <View
-                    style={{
-                      borderBottomWidth: 1,
-                      borderBottomColor: "#eee",
-                      paddingVertical: 8,
-                    }}
-                  >
-                    <Text
-                      style={{
-                        fontWeight: item.isRead ? "normal" : "bold",
-                        color: item.isRead ? "#333" : "#007bff",
-                        fontSize: 16,
-                      }}
-                    >
-                      {item.title}
-                    </Text>
-                    <Text style={{ fontSize: 13, color: "#888", marginBottom: 6 }}>
-                      {item.content}
-                    </Text>
-                    {!item.isRead ? (
-                      <TouchableOpacity
-                        onPress={() => markAsRead(item.id)}
-                        style={{
-                          alignSelf: "flex-end",
-                          backgroundColor: "#007bff",
-                          paddingHorizontal: 14,
-                          paddingVertical: 6,
-                          borderRadius: 6,
-                        }}
-                      >
-                        <Text style={{ color: "white" }}>Đã đọc</Text>
-                      </TouchableOpacity>
-                    ) : (
-                      <Text
-                        style={{
-                          alignSelf: "flex-end",
-                          color: "green",
-                          fontStyle: "italic",
-                          fontSize: 13,
-                        }}
-                      >
-                        Đã đọc
+                  <View style={styles.notificationItem}>
+                    <View style={styles.notificationContent}>
+                      <View style={styles.notificationHeader}>
+                        <Text style={[
+                          styles.notificationTitle,
+                          { fontWeight: item.isRead ? "500" : "600" }
+                        ]}>
+                          {item.title}
+                        </Text>
+                        {!item.isRead && <View style={styles.unreadDot} />}
+                      </View>
+                      <Text style={styles.notificationText}>
+                        {item.content}
                       </Text>
-                    )}
+                      <View style={styles.notificationActions}>
+                        {!item.isRead ? (
+                          <TouchableOpacity
+                            onPress={() => markAsRead(item.id)}
+                            style={styles.markReadButton}
+                          >
+                            <Text style={styles.markReadButtonText}>Đánh dấu đã đọc</Text>
+                          </TouchableOpacity>
+                        ) : (
+                          <View style={styles.readStatus}>
+                            <Ionicons name="checkmark-circle" size={16} color="#34C759" />
+                            <Text style={styles.readStatusText}>Đã đọc</Text>
+                          </View>
+                        )}
+                      </View>
+                    </View>
                   </View>
                 )}
                 keyExtractor={(item) => item.id.toString()}
-                ListEmptyComponent={<Text>Không có thông báo</Text>}
+                showsVerticalScrollIndicator={false}
+                ListEmptyComponent={
+                  <View style={styles.emptyNotifications}>
+                    <Ionicons name="notifications-outline" size={48} color="#C7C7CC" />
+                    <Text style={styles.emptyNotificationsText}>Không có thông báo</Text>
+                  </View>
+                }
               />
             )}
-            <TouchableOpacity
-              onPress={() => setNotificationModalVisible(false)}
-              style={{ marginTop: 15 }}
-            >
-              <Text style={{ color: "blue", textAlign: "center" }}>Đóng</Text>
-            </TouchableOpacity>
           </View>
         </View>
       </Modal>
 
-      {/* Modal hiển thị menu tài khoản */}
+      {/* User Menu Modal */}
       <Modal
         visible={userModalVisible}
         animationType="slide"
         transparent={true}
       >
-        <View
-          style={{
-            flex: 1,
-            justifyContent: "center",
-            backgroundColor: "rgba(0,0,0,0.5)",
-          }}
-        >
-          <View
-            style={{
-              backgroundColor: "white",
-              margin: 20,
-              padding: 20,
-              borderRadius: 10,
-            }}
-          >
-            <Text style={{ fontSize: 20, fontWeight: "bold", marginBottom: 18, color: "#1976D2", textAlign: 'center', letterSpacing: 0.5 }}>
-              Quản lý tài khoản
-            </Text>
-            <TouchableOpacity
-              style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 12 }}
-              onPress={() => {
-                setUserModalVisible(false);
-                navigation.navigate("ProfileScreen");
-              }}
-            >
-              <Ionicons name="person-circle-outline" size={24} color="#1976D2" style={{ marginRight: 12 }} />
-              <Text style={{ fontSize: 16, color: '#222' }}>Thông tin cá nhân</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 12 }}
-              onPress={() => {
-                setUserModalVisible(false);
-                navigation.navigate("NotificationCenterScreen");
-              }}
-            >
-              <Ionicons name="notifications-outline" size={24} color="#1976D2" style={{ marginRight: 12 }} />
-              <Text style={{ fontSize: 16, color: '#222' }}>Trung tâm thông báo</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 12 }}
-              onPress={handleLogout}
-            >
-              <Ionicons name="log-out-outline" size={24} color="#FF3B30" style={{ marginRight: 12 }} />
-              <Text style={{ fontSize: 16, color: '#FF3B30' }}>Đăng xuất</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => setUserModalVisible(false)}
-              style={{ marginTop: 18 }}
-            >
-              <Text style={{ color: "#1976D2", textAlign: "center", fontWeight: '600', fontSize: 15 }}>Đóng</Text>
-            </TouchableOpacity>
+        <View style={styles.modalOverlay}>
+          <View style={styles.userModal}>
+            <View style={styles.modalHeader}>
+              <View style={styles.modalTitleContainer}>
+                <View style={styles.modalIconContainer}>
+                  <Ionicons name="person" size={24} color="#10B981" />
+                </View>
+                <Text style={styles.modalTitle}>Tài khoản</Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => setUserModalVisible(false)}
+                style={styles.closeButton}
+              >
+                <Ionicons name="close" size={24} color="#6B7280" />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.userMenuContent}>
+              <TouchableOpacity
+                style={styles.menuItem}
+                onPress={() => {
+                  setUserModalVisible(false);
+                  navigation.navigate("ProfileScreen");
+                }}
+                activeOpacity={0.8}
+              >
+                <View style={[styles.menuItemIcon, { backgroundColor: '#DBEAFE' }]}>
+                  <Ionicons name="person" size={20} color="#3B82F6" />
+                </View>
+                <Text style={styles.menuItemText}>Thông tin cá nhân</Text>
+                <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.menuItem}
+                onPress={() => {
+                  setUserModalVisible(false);
+                  navigation.navigate("NotificationCenterScreen");
+                }}
+                activeOpacity={0.8}
+              >
+                <View style={[styles.menuItemIcon, { backgroundColor: '#FEF3C7' }]}>
+                  <Ionicons name="notifications" size={20} color="#F59E0B" />
+                </View>
+                <Text style={styles.menuItemText}>Trung tâm thông báo</Text>
+                <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+              </TouchableOpacity>
+
+              <View style={styles.menuDivider} />
+
+              <TouchableOpacity
+                style={styles.menuItem}
+                onPress={handleLogout}
+                activeOpacity={0.8}
+              >
+                <View style={[styles.menuItemIcon, { backgroundColor: '#FEE2E2' }]}>
+                  <Ionicons name="log-out" size={20} color="#EF4444" />
+                </View>
+                <Text style={[styles.menuItemText, { color: '#EF4444' }]}>Đăng xuất</Text>
+                <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
     </SafeAreaView>
   );
 };
+
+const styles = StyleSheet.create({
+  safeArea: {
+    backgroundColor: "#1E3A8A",
+  },
+  headerContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    backgroundColor: "#1E3A8A",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  logoContainer: {
+    flex: 1,
+    marginRight: 16,
+  },
+  logoDesign: {
+    flexDirection: "column",
+    justifyContent: "center",
+  },
+  acvBrand: {
+    flexDirection: "column",
+    alignItems: "flex-start",
+  },
+  acvMainText: {
+    fontSize: 28,
+    fontWeight: "900",
+    color: "#FFFFFF",
+    letterSpacing: 1.5,
+    textShadowColor: "rgba(0,0,0,0.3)",
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
+    marginBottom: 4,
+  },
+  companyInfo: {
+    flexDirection: "column",
+    alignItems: "flex-start",
+  },
+  companyVietText: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#FFFFFF",
+    lineHeight: 12,
+    marginBottom: 2,
+    letterSpacing: 0.4,
+  },
+  dividerLine: {
+    height: 1.5,
+    backgroundColor: "#60A5FA",
+    width: 120,
+    marginVertical: 1,
+  },
+  companyEngText: {
+    fontSize: 9,
+    fontWeight: "600",
+    color: "#E0E7FF",
+    lineHeight: 11,
+    letterSpacing: 0.6,
+    marginTop: 1,
+  },
+  actionsContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  actionButton: {
+    width: 44,
+    height: 44,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  iconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: "center",
+    alignItems: "center",
+    position: "relative",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 3,
+  },
+  notificationButton: {
+    backgroundColor: "#F59E0B",
+    borderWidth: 2,
+    borderColor: "#FCD34D",
+  },
+  profileButton: {
+    backgroundColor: "#10B981",
+    borderWidth: 2,
+    borderColor: "#6EE7B7",
+  },
+  badge: {
+    position: "absolute",
+    top: -4,
+    right: -4,
+    backgroundColor: "#EF4444",
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 2,
+    borderColor: "#FFFFFF",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 2,
+    elevation: 4,
+  },
+  badgeText: {
+    color: "white",
+    fontSize: 10,
+    fontWeight: "bold",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.6)",
+    justifyContent: "flex-end",
+  },
+  notificationModal: {
+    backgroundColor: "#FFFFFF",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: "80%",
+    paddingBottom: 20,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: -4,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 10,
+  },
+  userModal: {
+    backgroundColor: "#FFFFFF",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingBottom: 20,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: -4,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 10,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 18,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F3F4F6",
+    backgroundColor: "#FAFBFC",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+  },
+  modalTitleContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  modalIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#F3F4F6",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 10,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#1F2937",
+  },
+  closeButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#F9FAFB",
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+  loadingContainer: {
+    padding: 40,
+    alignItems: "center",
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: "#6B7280",
+    fontWeight: "500",
+  },
+  notificationItem: {
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F9FAFB",
+  },
+  notificationContent: {
+    flex: 1,
+  },
+  notificationHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 6,
+  },
+  notificationTitle: {
+    fontSize: 16,
+    color: "#111827",
+    flex: 1,
+    fontWeight: "600",
+  },
+  unreadDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#3B82F6",
+    marginLeft: 8,
+  },
+  notificationText: {
+    fontSize: 14,
+    color: "#6B7280",
+    lineHeight: 20,
+    marginBottom: 12,
+  },
+  notificationActions: {
+    alignItems: "flex-end",
+  },
+  markReadButton: {
+    backgroundColor: "#3B82F6",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    shadowColor: "#3B82F6",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  markReadButtonText: {
+    color: "white",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  readStatus: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  readStatusText: {
+    color: "#10B981",
+    fontSize: 14,
+    fontWeight: "500",
+    marginLeft: 4,
+  },
+  emptyNotifications: {
+    padding: 40,
+    alignItems: "center",
+  },
+  emptyNotificationsText: {
+    fontSize: 16,
+    color: "#9CA3AF",
+    marginTop: 12,
+    fontWeight: "500",
+  },
+  userMenuContent: {
+    paddingHorizontal: 20,
+    paddingTop: 8,
+  },
+  menuItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 16,
+    paddingHorizontal: 4,
+    borderRadius: 12,
+    marginVertical: 2,
+  },
+  menuItemIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#E8F4FD",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 16,
+  },
+  menuItemText: {
+    fontSize: 16,
+    color: "#1F2937",
+    flex: 1,
+    fontWeight: "600",
+  },
+  menuDivider: {
+    height: 1,
+    backgroundColor: "#E5E7EB",
+    marginVertical: 8,
+    marginHorizontal: 4,
+  },
+});
 
 export default Header;

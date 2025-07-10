@@ -325,8 +325,11 @@ const handleSearchUsers = async () => {
   // SelectModal cho chọn chuyến bay
   const FlightSelectModal = () => (
     <SelectModal
-      label="Chọn chuyến bay"
-      data={flights.map(fl => ({ label: `${fl.flightNumber} (${fl.departureAirport.airportCode} → ${fl.arrivalAirport.airportCode})`, value: fl.id.toString() }))}
+      label=""
+      data={flights.map(fl => ({ 
+        label: `${fl.flightNumber} (${fl.departureAirport.airportCode} → ${fl.arrivalAirport.airportCode})`, 
+        value: fl.id.toString() 
+      }))}
       value={selectedFlightId}
       onChange={setSelectedFlightId}
       placeholder="Chọn chuyến bay"
@@ -340,8 +343,11 @@ const handleSearchUsers = async () => {
     const disabledUserIds = users.filter(u => u.assignedFlight || u.assignedShiftCode).map(u => u.id);
     return (
       <SelectModal
-        label="Chọn nhân viên"
-        data={users.map(u => ({ label: u.name + (u.assignedFlight ? ` [Đã phục vụ chuyến bay${u.assignedFlight.flightNumber ? ' ' + u.assignedFlight.flightNumber : ''}]` : u.assignedShiftCode ? ` [Ca trực: ${u.assignedShiftCode}]` : ''), value: u.id }))}
+        label=""
+        data={users.map(u => ({ 
+          label: u.name + (u.assignedFlight ? ` [Đã phục vụ chuyến bay${u.assignedFlight.flightNumber ? ' ' + u.assignedFlight.flightNumber : ''}]` : u.assignedShiftCode ? ` [Ca trực: ${u.assignedShiftCode}]` : ''), 
+          value: u.id 
+        }))}
         multi
         selectedValues={selectedUserIds}
         onChange={setSelectedUserIds}
@@ -354,59 +360,117 @@ const handleSearchUsers = async () => {
 
   const ListHeader = () => (
     <View style={styles.headerContainer}>
-      <Text style={styles.title}>Áp dụng ca theo chuyến bay</Text>
-      <Text style={styles.label}>Team:</Text>
-      <View style={styles.dateButton}>
-        <Text style={styles.dateText}>
-          {teams.find(t => t.id.toString() === userTeamId)?.teamName || "(Không xác định)"}
-        </Text>
+      <View style={styles.titleSection}>
+        <View style={styles.titleIcon}>
+          <Ionicons name="airplane" size={24} color="#1E3A8A" />
+        </View>
+        <Text style={styles.title}>Áp dụng ca theo chuyến bay</Text>
       </View>
-      <SelectModal
-        label="Chọn Unit"
-        data={units.map(u => ({ label: u.unitName, value: u.id }))}
-        value={selectedUnit}
-        onChange={setSelectedUnit}
-        placeholder="Chọn Unit"
-        title="Chọn Unit"
-        disabled={!userTeamId}
-      />
-      <Text style={styles.label}>Chọn ngày:</Text>
-      <TouchableOpacity onPress={() => setDatePickerVisible(true)} style={styles.dateButton}>
-        <Text style={styles.dateText}>
-          {shiftDate ? shiftDate.toISOString().split("T")[0] : "Chọn ngày"}
-        </Text>
-      </TouchableOpacity>
-      <DateTimePickerModal
-        isVisible={isDatePickerVisible}
-        mode="date"
-        onConfirm={(date) => {
-          setShiftDate(date);
-          setDatePickerVisible(false);
-        }}
-        onCancel={() => setDatePickerVisible(false)}
-      />
-      {loadingFlights ? (
-        <ActivityIndicator size="small" color="#007AFF" style={{ marginTop: 10 }} />
-      ) : flights && flights.length > 0 ? (
-        <FlightSelectModal />
-      ) : (
-        shiftDate && (
-          <Text style={styles.infoText}>
-            Không có chuyến bay nào được tìm thấy cho ngày đã chọn.
+      
+      <View style={styles.formCard}>
+        <View style={styles.formSection}>
+          <Text style={styles.label}>
+            <Ionicons name="business" size={16} color="#1E3A8A" /> Team hiện tại
           </Text>
-        )
-      )}
-      <TouchableOpacity style={styles.primaryButton} onPress={handleSearchUsers}>
-        <Ionicons name="search" size={20} color="white" style={{ marginRight: 6 }} />
-        <Text style={styles.primaryButtonText}>Tìm kiếm nhân viên</Text>
-      </TouchableOpacity>
-      {loadingUsers && (
-        <ActivityIndicator size="small" color="#007AFF" style={{ marginTop: 10 }} />
-      )}
-      {/* Luôn hiển thị SelectModal chọn nhân viên nếu có users */}
+          <View style={styles.infoCard}>
+            <Text style={styles.infoText}>
+              {teams.find(t => t.id.toString() === userTeamId)?.teamName || "(Không xác định)"}
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.formSection}>
+          <Text style={styles.label}>
+            <Ionicons name="location" size={16} color="#1E3A8A" /> Chọn Unit
+          </Text>
+          <SelectModal
+            label=""
+            data={units.map(u => ({ label: u.unitName, value: u.id }))}
+            value={selectedUnit}
+            onChange={setSelectedUnit}
+            placeholder="Chọn Unit"
+            title="Chọn Unit"
+            disabled={!userTeamId}
+          />
+        </View>
+
+        <View style={styles.formSection}>
+          <Text style={styles.label}>
+            <Ionicons name="calendar" size={16} color="#1E3A8A" /> Chọn ngày
+          </Text>
+          <TouchableOpacity
+            style={styles.dateButton}
+            onPress={() => setDatePickerVisible(true)}
+          >
+            <Ionicons name="calendar-outline" size={20} color="#6B7280" style={styles.dateIcon} />
+            <Text style={styles.dateText}>
+              {shiftDate ? shiftDate.toISOString().split("T")[0] : "Chọn ngày"}
+            </Text>
+            <Ionicons name="chevron-down" size={20} color="#6B7280" />
+          </TouchableOpacity>
+        </View>
+
+        <DateTimePickerModal
+          isVisible={isDatePickerVisible}
+          mode="date"
+          onConfirm={(date) => {
+            setShiftDate(date);
+            setDatePickerVisible(false);
+          }}
+          onCancel={() => setDatePickerVisible(false)}
+        />
+
+        {/* Flight Selection Section */}
+        {loadingFlights ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#1E3A8A" />
+            <Text style={styles.loadingText}>Đang tải chuyến bay...</Text>
+          </View>
+        ) : flights && flights.length > 0 ? (
+          <View style={styles.formSection}>
+            <Text style={styles.label}>
+              <Ionicons name="airplane" size={16} color="#1E3A8A" /> Chọn chuyến bay
+            </Text>
+            <FlightSelectModal />
+          </View>
+        ) : (
+          shiftDate && (
+            <View style={styles.noDataContainer}>
+              <Ionicons name="airplane-outline" size={48} color="#9CA3AF" />
+              <Text style={styles.noDataText}>
+                Không có chuyến bay nào cho ngày đã chọn
+              </Text>
+            </View>
+          )
+        )}
+
+        <TouchableOpacity style={styles.searchButton} onPress={handleSearchUsers}>
+          <Ionicons name="search" size={20} color="white" style={styles.buttonIcon} />
+          <Text style={styles.searchButtonText}>Tìm kiếm nhân viên</Text>
+        </TouchableOpacity>
+        
+        {loadingUsers && (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#1E3A8A" />
+            <Text style={styles.loadingText}>Đang tìm kiếm nhân viên...</Text>
+          </View>
+        )}
+      </View>
+
+      {/* User Selection */}
       {users.length > 0 && (
-        <View style={{ marginTop: 16 }}>
+        <View style={styles.userSelectContainer}>
+          <View style={styles.userSelectHeader}>
+            <Ionicons name="people-outline" size={20} color="#1E3A8A" />
+            <Text style={styles.userSelectTitle}>Danh sách nhân viên ({users.length})</Text>
+          </View>
           <UserSelectModal />
+          {selectedUserIds.length > 0 && (
+            <View style={styles.selectedInfo}>
+              <Ionicons name="checkmark-circle" size={16} color="#10B981" />
+              <Text style={styles.selectedText}>Đã chọn {selectedUserIds.length} nhân viên</Text>
+            </View>
+          )}
         </View>
       )}
     </View>
@@ -414,10 +478,12 @@ const handleSearchUsers = async () => {
 
   const ListFooter = () => (
     <View style={styles.footerContainer}>
-      <TouchableOpacity style={styles.primaryButton} onPress={handleApplyShift}>
-        <Ionicons name="checkmark-circle" size={20} color="white" style={{ marginRight: 6 }} />
-        <Text style={styles.primaryButtonText}>Áp dụng ca</Text>
-      </TouchableOpacity>
+      <View style={styles.actionCard}>
+        <TouchableOpacity style={styles.applyButton} onPress={handleApplyShift}>
+          <Ionicons name="checkmark-circle" size={22} color="white" style={styles.buttonIcon} />
+          <Text style={styles.applyButtonText}>Áp dụng ca chuyến bay</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 
@@ -437,93 +503,261 @@ const handleSearchUsers = async () => {
 export default ApplyFlightShiftScreen;
 
 const styles = StyleSheet.create({
+  // Header Container
   headerContainer: {
-    padding: 16,
-    backgroundColor: "#CFE2FF",
+    padding: 20,
+    backgroundColor: "#F8FAFC"
   },
-  footerContainer: {
-    padding: 16,
-    backgroundColor: "#CFE2FF",
+  titleSection: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 24,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E2E8F0",
   },
-  listContainer: {
-    paddingBottom: 20,
+  titleIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "#EEF2FF",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 16,
   },
   title: {
-    fontSize: 22,
-    fontWeight: "bold",
-    marginBottom: 15,
-    textAlign: "center",
-    color: "#007AFF",
+    fontSize: 24,
+    fontWeight: "700",
+    color: "#1E3A8A",
+    flex: 1,
+  },
+
+  // Form Cards
+  formCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+    marginBottom: 16,
+  },
+  formSection: {
+    marginBottom: 20,
   },
   label: {
-    fontSize: 14,
-    marginTop: 10,
-    marginBottom: 5,
+    fontSize: 16,
     fontWeight: "600",
-  },
-  pickerContainer: {
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 5,
-    backgroundColor: "white",
-    marginBottom: 10,
-  },
-  dateButton: {
-    backgroundColor: "white",
-    padding: 10,
-    borderRadius: 5,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: "#ddd",
+    color: "#374151",
+    marginBottom: 8,
+    flexDirection: "row",
     alignItems: "center",
+  },
+
+  // Info Card
+  infoCard: {
+    backgroundColor: "#F0F9FF",
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#BAE6FD",
+  },
+  infoText: {
+    fontSize: 16,
+    color: "#0C4A6E",
+    fontWeight: "500",
+  },
+
+  // Date Button
+  dateButton: {
+    backgroundColor: "#FFFFFF",
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#D1D5DB",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  dateIcon: {
+    marginRight: 12,
   },
   dateText: {
     fontSize: 16,
-    color: "#333",
+    color: "#374151",
+    fontWeight: "500",
+    flex: 1,
   },
-  userItem: {
-    padding: 10,
-    backgroundColor: "white",
+
+  // Search Button
+  searchButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1E3A8A',
+    paddingVertical: 16,
+    borderRadius: 12,
+    justifyContent: 'center',
+    marginTop: 8,
+    shadowColor: '#1E3A8A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  searchButtonText: {
+    color: 'white',
+    fontWeight: '600',
+    fontSize: 16,
+    letterSpacing: 0.5,
+  },
+  buttonIcon: {
+    marginRight: 8,
+  },
+
+  // Loading
+  loadingContainer: {
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: '#6B7280',
+    fontWeight: '500',
+  },
+
+  // No Data
+  noDataContainer: {
+    alignItems: 'center',
+    paddingVertical: 32,
+    backgroundColor: "#F9FAFB",
+    borderRadius: 12,
+    marginVertical: 8,
+  },
+  noDataText: {
+    fontSize: 16,
+    color: "#6B7280",
+    fontWeight: "500",
+    marginTop: 12,
+    textAlign: "center",
+  },
+
+  // User Selection
+  userSelectContainer: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 20,
+    marginVertical: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  userSelectHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F3F4F6",
+  },
+  userSelectTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#1E3A8A",
+    marginLeft: 8,
+  },
+  selectedInfo: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 12,
+    padding: 12,
+    backgroundColor: "#ECFDF5",
     borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#A7F3D0",
+  },
+  selectedText: {
+    fontSize: 14,
+    color: "#065F46",
+    fontWeight: "500",
+    marginLeft: 6,
+  },
+
+  // Footer
+  footerContainer: {
+    padding: 20,
+    backgroundColor: "#F8FAFC",
+  },
+  actionCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+
+  // Apply Button
+  applyButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#10B981',
+    paddingVertical: 16,
+    borderRadius: 12,
+    justifyContent: 'center',
+    shadowColor: '#10B981',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  applyButtonText: {
+    color: 'white',
+    fontWeight: '600',
+    fontSize: 16,
+    letterSpacing: 0.5,
+  },
+
+  // List Container
+  listContainer: {
+    paddingBottom: 100,
+  },
+
+  // Legacy styles (for backward compatibility)
+  userItem: {
+    padding: 16,
+    backgroundColor: "white",
+    marginBottom: 8,
+    borderRadius: 12,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginHorizontal: 16,
-    marginBottom: 5,
+    marginHorizontal: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   selectedUserItem: {
-    backgroundColor: "#d0f0c0",
+    backgroundColor: "#ECFDF5",
+    borderWidth: 1,
+    borderColor: "#A7F3D0",
   },
   assignedUserItem: {
-    backgroundColor: "#ffe4b5",
+    backgroundColor: "#FEF3C7",
+    borderWidth: 1,
+    borderColor: "#FCD34D",
   },
   userName: {
     fontSize: 16,
-  },
-  infoText: {
-    fontSize: 14,
-    color: "#555",
-    marginTop: 5,
-    marginBottom: 10,
-  },
-  primaryButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#007AFF',
-    paddingVertical: 13,
-    borderRadius: 8,
-    justifyContent: 'center',
-    marginTop: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.12,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  primaryButtonText: {
-    color: 'white',
-    fontWeight: 'bold',
-    fontSize: 16,
-    letterSpacing: 1,
+    fontWeight: "500",
+    color: "#374151",
   },
 });

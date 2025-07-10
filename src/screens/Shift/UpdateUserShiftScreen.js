@@ -7,6 +7,8 @@ import {
   Alert,
   StyleSheet,
   TouchableOpacity,
+  ScrollView,
+  ActivityIndicator,
 } from "react-native";
 import { Picker } from "@react-native-picker/picker";
 import Layout from "../Common/Layout";
@@ -14,6 +16,7 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 import httpApiClient from "../../services";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import SelectModal from "../../components/SelectModal";
+import { Ionicons } from "@expo/vector-icons";
 
 const UpdateUserShiftScreen = () => {
   const navigation = useNavigation();
@@ -33,6 +36,7 @@ const UpdateUserShiftScreen = () => {
 
   // State để điều khiển hiển thị Date Picker
   const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     // Fetch danh sách shift khi component mount
@@ -77,6 +81,8 @@ const UpdateUserShiftScreen = () => {
       Alert.alert("Lỗi", "Vui lòng nhập ngày và chọn ca trực!");
       return;
     }
+    
+    setIsLoading(true);
     try {
       // Payload gửi theo yêu cầu backend
       const payload = {
@@ -91,11 +97,14 @@ const UpdateUserShiftScreen = () => {
         const text = await res.text();
         throw new Error(text || "Không thể cập nhật lịch trực");
       }
-      Alert.alert("Thành công", "Cập nhật lịch trực thành công!");
-      navigation.goBack();
+      Alert.alert("Thành công", "Cập nhật lịch trực thành công!", [
+        { text: "OK", onPress: () => navigation.goBack() }
+      ]);
     } catch (error) {
       console.error("Lỗi khi cập nhật:", error);
       Alert.alert("Lỗi", error.message || "Không thể kết nối đến server");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -107,39 +116,93 @@ const UpdateUserShiftScreen = () => {
 
   return (
     <Layout>
-      <View style={styles.container}>
-        <Text style={styles.title}>Cập nhật lịch trực</Text>
+      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+        {/* Header Card */}
+        <View style={styles.headerCard}>
+          <View style={styles.headerContent}>
+            <Ionicons name="calendar-outline" size={32} color="#0EA5E9" />
+            <View style={styles.headerText}>
+              <Text style={styles.title}>Cập nhật lịch trực</Text>
+              <Text style={styles.subtitle}>Chỉnh sửa thông tin ca trực</Text>
+            </View>
+          </View>
+        </View>
 
-        <Text style={styles.label}>Ngày (YYYY-MM-DD):</Text>
-        {/* Dùng TouchableOpacity để mở DatePicker khi người dùng chạm vào */}
-        <TouchableOpacity onPress={showDatePicker}>
-          <TextInput
-            style={styles.input}
-            value={shiftDate}
-            placeholder="Chọn ngày"
-            editable={false}
-            pointerEvents="none"
+        {/* Form Card */}
+        <View style={styles.formCard}>
+          {/* Date Selection */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>
+              <Ionicons name="calendar" size={16} color="#1e40af" /> Chọn ngày làm việc
+            </Text>
+            <TouchableOpacity 
+              style={styles.datePickerButton} 
+              onPress={showDatePicker}
+              activeOpacity={0.7}
+            >
+              <View style={styles.datePickerContent}>
+                <Ionicons name="calendar-outline" size={20} color="#64748b" />
+                <Text style={[styles.dateText, !shiftDate && styles.placeholderText]}>
+                  {shiftDate ? new Date(shiftDate).toLocaleDateString('vi-VN') : "Chọn ngày"}
+                </Text>
+                <Ionicons name="chevron-down" size={20} color="#64748b" />
+              </View>
+            </TouchableOpacity>
+          </View>
+
+          {/* Shift Selection */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>
+              <Ionicons name="time" size={16} color="#1e40af" /> Chọn ca trực
+            </Text>
+            <SelectModal
+              data={shifts.map(s => ({ label: s.shiftCode, value: s.id }))}
+              value={shiftId}
+              onChange={setShiftId}
+              placeholder="Chọn ca trực"
+              title="Chọn ca trực"
+            />
+          </View>
+
+          {/* DateTimePickerModal */}
+          <DateTimePickerModal
+            isVisible={isDatePickerVisible}
+            mode="date"
+            onConfirm={handleConfirmDate}
+            onCancel={hideDatePicker}
+            display="default"
+            locale="vi"
           />
-        </TouchableOpacity>
-        {/* DateTimePickerModal để chọn ngày */}
-        <DateTimePickerModal
-          isVisible={isDatePickerVisible}
-          mode="date"
-          onConfirm={handleConfirmDate}
-          onCancel={hideDatePicker}
-        />
+        </View>
 
-        <Text style={styles.label}>Chọn ca trực (theo ID):</Text>
-        <SelectModal
-          data={shifts.map(s => ({ label: s.shiftCode, value: s.id }))}
-          value={shiftId}
-          onChange={setShiftId}
-          placeholder="Chọn ca trực"
-          title="Chọn ca trực"
-        />
+        {/* Action Buttons */}
+        <View style={styles.actionCard}>
+          <TouchableOpacity
+            style={styles.cancelButton}
+            onPress={() => navigation.goBack()}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="close-circle-outline" size={20} color="#64748b" />
+            <Text style={styles.cancelButtonText}>Hủy</Text>
+          </TouchableOpacity>
 
-        <Button title="Cập nhật" onPress={handleUpdate} />
-      </View>
+          <TouchableOpacity
+            style={[styles.updateButton, isLoading && styles.disabledButton]}
+            onPress={handleUpdate}
+            disabled={isLoading}
+            activeOpacity={0.7}
+          >
+            {isLoading ? (
+              <ActivityIndicator color="#ffffff" size="small" />
+            ) : (
+              <Ionicons name="checkmark-circle" size={20} color="#ffffff" />
+            )}
+            <Text style={styles.updateButtonText}>
+              {isLoading ? "Đang cập nhật..." : "Cập nhật"}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
     </Layout>
   );
 };
@@ -149,33 +212,160 @@ export default UpdateUserShiftScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#E0F2FE",
+    backgroundColor: "#f8fafc",
+    padding: 16,
+  },
+  
+  // Header Card
+  headerCard: {
+    backgroundColor: "#ffffff",
+    borderRadius: 16,
     padding: 20,
-    justifyContent: "center",
+    marginBottom: 16,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  headerContent: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  headerText: {
+    marginLeft: 16,
+    flex: 1,
   },
   title: {
-    fontSize: 22,
-    fontWeight: "bold",
+    fontSize: 24,
+    fontWeight: "700",
+    color: "#1e293b",
+    marginBottom: 4,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: "#64748b",
+    fontWeight: "500",
+  },
+
+  // Form Card
+  formCard: {
+    backgroundColor: "#ffffff",
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+
+  // Input Groups
+  inputGroup: {
     marginBottom: 20,
-    textAlign: "center",
   },
   label: {
-    marginTop: 10,
+    fontSize: 16,
     fontWeight: "600",
+    color: "#374151",
+    marginBottom: 8,
+    flexDirection: "row",
+    alignItems: "center",
   },
-  input: {
-    backgroundColor: "white",
-    padding: 10,
-    marginVertical: 10,
-    borderRadius: 5,
+
+  // Date Picker
+  datePickerButton: {
+    backgroundColor: "#ffffff",
     borderWidth: 1,
-    borderColor: "#ddd",
+    borderColor: "#d1d5db",
+    borderRadius: 12,
+    padding: 16,
   },
-  pickerContainer: {
+  datePickerContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  dateText: {
+    fontSize: 16,
+    color: "#374151",
+    fontWeight: "500",
+    flex: 1,
+    marginLeft: 12,
+  },
+  placeholderText: {
+    color: "#9ca3af",
+  },
+
+  // Action Card
+  actionCard: {
+    backgroundColor: "#ffffff",
+    borderRadius: 16,
+    padding: 20,
+    flexDirection: "row",
+    gap: 12,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+
+  // Cancel Button
+  cancelButton: {
+    flex: 1,
+    backgroundColor: "#f8fafc",
     borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 5,
-    backgroundColor: "white",
-    marginBottom: 20,
+    borderColor: "#e2e8f0",
+    borderRadius: 12,
+    paddingVertical: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#64748b",
+  },
+
+  // Update Button
+  updateButton: {
+    flex: 2,
+    backgroundColor: "#1e40af",
+    borderRadius: 12,
+    paddingVertical: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    shadowColor: "#1e40af",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 4.65,
+    elevation: 8,
+  },
+  updateButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#ffffff",
+  },
+  disabledButton: {
+    backgroundColor: "#9ca3af",
+    shadowOpacity: 0.1,
   },
 });

@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import Layout from "../Common/Layout"; 
 import { useNavigation } from "@react-navigation/native";
@@ -27,17 +27,22 @@ const FlightScreen = () => {
 
   return (
     <Layout>
-      <View style={[styles.container, { flex: 1 }]}>
-        <Text style={styles.title}>Chuyến bay</Text>
+      <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+        <View style={styles.headerSection}>
+          <Ionicons name="airplane" size={28} color="#1565C0" />
+          <Text style={styles.title}>Quản Lý Chuyến Bay</Text>
+        </View>
         
-        <View style={styles.menu}>
+        <View style={styles.menuGrid}>
           {/* Tạo chuyến bay */}
           {hasPermission("CAN_CREATE_FLIGHT") && (
             <TouchableOpacity
               style={styles.menuItem}
               onPress={() => navigation.navigate("CreateFlightScreen")}
             >
-              <Ionicons name="airplane-outline" size={40} color="white" />
+              <View style={styles.iconContainer}>
+                <Ionicons name="add-circle" size={32} color="#1565C0" />
+              </View>
               <Text style={styles.menuText}>Tạo chuyến bay</Text>
             </TouchableOpacity>
           )}
@@ -47,7 +52,9 @@ const FlightScreen = () => {
             style={styles.menuItem}
             onPress={() => navigation.navigate("FlightListScreen")}
           >
-            <Ionicons name="list-outline" size={40} color="white" />
+            <View style={styles.iconContainer}>
+              <Ionicons name="list" size={32} color="#1565C0" />
+            </View>
             <Text style={styles.menuText}>Danh sách chuyến bay trong ngày</Text>
           </TouchableOpacity>
 
@@ -56,7 +63,9 @@ const FlightScreen = () => {
             style={styles.menuItem}
             onPress={() => navigation.navigate("SearchFlightScreen")}
           >
-            <Ionicons name="search-outline" size={40} color="white" />
+            <View style={styles.iconContainer}>
+              <Ionicons name="search" size={32} color="#1565C0" />
+            </View>
             <Text style={styles.menuText}>Tìm kiếm</Text>
           </TouchableOpacity>
 
@@ -65,20 +74,13 @@ const FlightScreen = () => {
             style={styles.menuItem}
             onPress={() => navigation.navigate("LiveTrackingMapScreen")}
           >
-            <Ionicons name="locate-outline" size={40} color="white" />
+            <View style={styles.iconContainer}>
+              <Ionicons name="location" size={32} color="#1565C0" />
+            </View>
             <Text style={styles.menuText}>Bản đồ Live Tracking</Text>
           </TouchableOpacity>
-
-          {/* Nếu cần 4 nút thì mở lại Tracking */}
-          {/* <TouchableOpacity
-            style={styles.menuItem}
-            onPress={() => navigation.navigate("FlightTrackingScreen")}
-          >
-            <Ionicons name="location-outline" size={40} color="white" />
-            <Text style={styles.menuText}>Theo dõi</Text>
-          </TouchableOpacity> */}
         </View>
-      </View>
+      </ScrollView>
     </Layout>
   );
 };
@@ -88,45 +90,70 @@ export default FlightScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#E0F2FE",
+    backgroundColor: "#f8f9fa",
+  },
+  scrollContent: {
+    paddingBottom: 100,
+  },
+  headerSection: {
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 20,
-    paddingVertical: 30,
+    paddingVertical: 20,
+    backgroundColor: "white",
+    borderBottomWidth: 1,
+    borderBottomColor: "#e9ecef",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   title: {
-    fontSize: 24,
-    fontWeight: "bold",
-    marginBottom: 25,
-    textAlign: "center",
-    color: "#007AFF",
+    fontSize: 22,
+    fontWeight: "700",
+    color: "#1565C0",
+    marginLeft: 12,
   },
-  // Menu sẽ chia làm 2 cột
-  menu: {
+  menuGrid: {
     flexDirection: "row",
-    flexWrap: "wrap",       // Cho phép xuống dòng
-    justifyContent: "center", 
-    // Có thể chỉnh alignItems, margin, padding nếu muốn
+    flexWrap: "wrap",
+    justifyContent: "space-around",
+    padding: 20,
+    gap: 16,
   },
   menuItem: {
-    backgroundColor: "#007AFF",
-    paddingVertical: 30,
-    paddingHorizontal: 20,
-    borderRadius: 15,
-    margin: 10,
-    // width "40%" để 2 nút / hàng (cộng với margin => 2 cột)
-    width: "40%",
+    backgroundColor: "white",
+    width: "45%",
+    aspectRatio: 1,
+    borderRadius: 16,
+    padding: 20,
     alignItems: "center",
     justifyContent: "center",
-    // Elevation / shadow
     shadowColor: "#000",
-    shadowOpacity: 0.2,
-    shadowRadius: 5,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 6,
+    borderWidth: 1,
+    borderColor: "#e9ecef",
+  },
+  iconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: "#f8f9fa",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 12,
+    borderWidth: 2,
+    borderColor: "#e3f2fd",
   },
   menuText: {
-    color: "white",
-    fontWeight: "bold",
-    fontSize: 16,
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#495057",
     textAlign: "center",
-    marginTop: 10,
+    lineHeight: 18,
   },
 });

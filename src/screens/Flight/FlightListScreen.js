@@ -405,7 +405,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 6,
     borderWidth: 1,
-    borderColor: '#e3e3e3',
+    borderColor: '#e3e8ef',
     position: 'relative',
   },
   cardLive: {

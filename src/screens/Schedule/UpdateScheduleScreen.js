@@ -7,11 +7,14 @@ import {
   StyleSheet,
   Alert,
   Button,
+  ScrollView,
+  ActivityIndicator,
 } from "react-native";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import Layout from "../Common/Layout";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import httpApiClient from "../../services";
+import { Ionicons } from "@expo/vector-icons";
 
 // Hàm chuyển chuỗi "HH:mm" sang đối tượng Date (dùng ngày hôm nay)
 const parseTimeStringToDate = (timeStr) => {
@@ -37,6 +40,7 @@ const UpdateScheduleScreen = () => {
   // State điều khiển hiển thị DateTimePickerModal cho time picker
   const [isStartPickerVisible, setIsStartPickerVisible] = useState(false);
   const [isEndPickerVisible, setIsEndPickerVisible] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     if (schedule) {
@@ -83,6 +87,7 @@ const UpdateScheduleScreen = () => {
     // Log payload để kiểm tra dữ liệu gửi xuống server
     console.log("Payload gửi xuống server:", payload);
 
+    setIsLoading(true);
     try {
       const scheduleUpdateResponse = await updateSchedule(`shifts/${schedule.id}`, payload);
       // Log status để kiểm tra
@@ -110,28 +115,141 @@ const UpdateScheduleScreen = () => {
       } else {
         Alert.alert("Lỗi", "Có lỗi xảy ra khi kết nối đến server");
       }
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
     <Layout>
-      <View style={styles.container}>
-        <Text style={styles.title}>Cập nhật lịch trực</Text>
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={styles.container}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Header Section */}
+        <View style={styles.headerSection}>
+          <View style={styles.titleIcon}>
+            <Ionicons name="create" size={24} color="#1E3A8A" />
+          </View>
+          <Text style={styles.title}>Cập nhật lịch trực</Text>
+        </View>
 
-        <TextInput
-          style={styles.input}
-          value={shiftCode}
-          onChangeText={setShiftCode}
-          placeholder="Mã lịch trực"
-        />
+        {/* Form Card */}
+        <View style={styles.formCard}>
+          {/* Shift Code */}
+          <View style={styles.inputSection}>
+            <Text style={styles.label}>
+              <Ionicons name="code-working" size={16} color="#1E3A8A" /> Mã lịch trực
+            </Text>
+            <View style={styles.inputContainer}>
+              <Ionicons name="bookmark-outline" size={20} color="#6B7280" style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                value={shiftCode}
+                onChangeText={setShiftCode}
+                placeholder="Nhập mã lịch trực"
+                placeholderTextColor="#9CA3AF"
+              />
+            </View>
+          </View>
 
-        <Text style={styles.label}>Thời gian vào ca</Text>
-        <TouchableOpacity
-          style={styles.timePickerContainer}
-          onPress={() => setIsStartPickerVisible(true)}
-        >
-          <Text style={styles.timeText}>{formatTime(startTime)}</Text>
-        </TouchableOpacity>
+          {/* Start Time */}
+          <View style={styles.inputSection}>
+            <Text style={styles.label}>
+              <Ionicons name="time" size={16} color="#1E3A8A" /> Thời gian vào ca
+            </Text>
+            <TouchableOpacity
+              style={styles.timePickerContainer}
+              onPress={() => setIsStartPickerVisible(true)}
+            >
+              <Ionicons name="time-outline" size={20} color="#1E3A8A" style={styles.timeIcon} />
+              <Text style={styles.timeText}>{formatTime(startTime)}</Text>
+              <Ionicons name="chevron-down" size={20} color="#6B7280" />
+            </TouchableOpacity>
+          </View>
+
+          {/* End Time */}
+          <View style={styles.inputSection}>
+            <Text style={styles.label}>
+              <Ionicons name="time" size={16} color="#1E3A8A" /> Thời gian ra ca
+            </Text>
+            <TouchableOpacity
+              style={styles.timePickerContainer}
+              onPress={() => setIsEndPickerVisible(true)}
+            >
+              <Ionicons name="time-outline" size={20} color="#1E3A8A" style={styles.timeIcon} />
+              <Text style={styles.timeText}>{formatTime(endTime)}</Text>
+              <Ionicons name="chevron-down" size={20} color="#6B7280" />
+            </TouchableOpacity>
+          </View>
+
+          {/* Location */}
+          <View style={styles.inputSection}>
+            <Text style={styles.label}>
+              <Ionicons name="location" size={16} color="#1E3A8A" /> Địa điểm trực
+            </Text>
+            <View style={styles.inputContainer}>
+              <Ionicons name="location-outline" size={20} color="#6B7280" style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                value={location}
+                onChangeText={setLocation}
+                placeholder="VD: Nhà ga T1"
+                placeholderTextColor="#9CA3AF"
+              />
+            </View>
+          </View>
+
+          {/* Description */}
+          <View style={styles.inputSection}>
+            <Text style={styles.label}>
+              <Ionicons name="document-text" size={16} color="#1E3A8A" /> Mô tả
+            </Text>
+            <View style={[styles.inputContainer, styles.textAreaContainer]}>
+              <Ionicons name="create-outline" size={20} color="#6B7280" style={[styles.inputIcon, styles.textAreaIcon]} />
+              <TextInput
+                style={[styles.input, styles.textArea]}
+                value={description}
+                onChangeText={setDescription}
+                placeholder="Mô tả chi tiết về ca trực..."
+                placeholderTextColor="#9CA3AF"
+                multiline
+                numberOfLines={4}
+                textAlignVertical="top"
+              />
+            </View>
+          </View>
+        </View>
+
+        {/* Action Buttons */}
+        <View style={styles.actionSection}>
+          <TouchableOpacity 
+            style={styles.cancelButton} 
+            onPress={() => navigation.goBack()}
+            disabled={isLoading}
+          >
+            <Ionicons name="close-circle" size={20} color="#6B7280" style={styles.buttonIcon} />
+            <Text style={styles.cancelButtonText}>Hủy bỏ</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={[styles.updateButton, isLoading && styles.disabledButton]} 
+            onPress={handleUpdate}
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <ActivityIndicator size="small" color="white" style={styles.buttonIcon} />
+            ) : (
+              <Ionicons name="checkmark-circle" size={20} color="white" style={styles.buttonIcon} />
+            )}
+            <Text style={styles.updateButtonText}>
+              {isLoading ? "Đang cập nhật..." : "Cập nhật lịch trực"}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Time Pickers */}
         <DateTimePickerModal
           isVisible={isStartPickerVisible}
           mode="time"
@@ -143,14 +261,6 @@ const UpdateScheduleScreen = () => {
           }}
           onCancel={() => setIsStartPickerVisible(false)}
         />
-
-        <Text style={styles.label}>Thời gian ra ca</Text>
-        <TouchableOpacity
-          style={styles.timePickerContainer}
-          onPress={() => setIsEndPickerVisible(true)}
-        >
-          <Text style={styles.timeText}>{formatTime(endTime)}</Text>
-        </TouchableOpacity>
         <DateTimePickerModal
           isVisible={isEndPickerVisible}
           mode="time"
@@ -162,98 +272,176 @@ const UpdateScheduleScreen = () => {
           }}
           onCancel={() => setIsEndPickerVisible(false)}
         />
-
-        <Text style={styles.label}>Địa điểm trực</Text>
-        <TextInput
-          style={styles.input}
-          value={location}
-          onChangeText={setLocation}
-          placeholder="VD: Nhà ga"
-        />
-
-        <Text style={styles.label}>Mô tả</Text>
-        <TextInput
-          style={[styles.input, styles.textArea]}
-          value={description}
-          onChangeText={setDescription}
-          placeholder="VD: Ca trực kỹ thuật..."
-          multiline
-        />
-
-        <TouchableOpacity style={styles.button} onPress={handleUpdate}>
-          <Text style={styles.buttonText}>CẬP NHẬT LỊCH TRỰC</Text>
-        </TouchableOpacity>
-      </View>
+      </ScrollView>
     </Layout>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  scrollView: {
     flex: 1,
+    backgroundColor: "#F8FAFC",
+  },
+  container: {
     padding: 20,
-    backgroundColor: "#E0F2FE",
+    paddingBottom: 100,
+  },
+
+  // Header Section
+  headerSection: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 24,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E2E8F0",
+  },
+  titleIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "#EEF2FF",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 16,
   },
   title: {
     fontSize: 24,
-    fontWeight: "bold",
-    marginBottom: 20,
-    textAlign: "center",
+    fontWeight: "700",
+    color: "#1E3A8A",
+    flex: 1,
   },
-  label: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#333",
-    marginBottom: 5,
-  },
-  input: {
-    height: 48,
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    backgroundColor: "white",
-    marginBottom: 15,
-    fontSize: 16,
-  },
-  textArea: {
-    height: 100,
-    textAlignVertical: "top",
-  },
-  timePickerContainer: {
-    height: 48,
-    borderColor: "#007AFF",
-    borderWidth: 1,
-    borderRadius: 8,
-    backgroundColor: "white",
-    marginBottom: 15,
-    paddingHorizontal: 12,
-    justifyContent: "center",
-    alignItems: "center",
-    // Shadow cho iOS
+
+  // Form Card
+  formCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 20,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-    // Elevation cho Android
-    elevation: 3,
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+    marginBottom: 24,
+  },
+
+  // Input Sections
+  inputSection: {
+    marginBottom: 20,
+  },
+  label: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#374151",
+    marginBottom: 8,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+
+  // Input Container
+  inputContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#D1D5DB",
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    minHeight: 56,
+  },
+  inputIcon: {
+    marginRight: 12,
+  },
+  input: {
+    flex: 1,
+    fontSize: 16,
+    color: "#374151",
+    paddingVertical: 0,
+  },
+
+  // Text Area
+  textAreaContainer: {
+    alignItems: "flex-start",
+    minHeight: 120,
+    paddingVertical: 16,
+  },
+  textAreaIcon: {
+    alignSelf: "flex-start",
+    marginTop: 2,
+  },
+  textArea: {
+    minHeight: 80,
+    textAlignVertical: "top",
+  },
+
+  // Time Picker
+  timePickerContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#D1D5DB",
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    minHeight: 56,
+    justifyContent: "space-between",
+  },
+  timeIcon: {
+    marginRight: 12,
   },
   timeText: {
     fontSize: 16,
-    color: "#007AFF",
+    color: "#1E3A8A",
     fontWeight: "600",
+    flex: 1,
   },
-  button: {
-    backgroundColor: "#007AFF",
-    padding: 15,
-    borderRadius: 8,
+
+  // Action Section
+  actionSection: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  cancelButton: {
+    flex: 1,
+    flexDirection: "row",
     alignItems: "center",
-    marginTop: 10,
+    justifyContent: "center",
+    backgroundColor: "#F9FAFB",
+    borderWidth: 1,
+    borderColor: "#D1D5DB",
+    paddingVertical: 16,
+    borderRadius: 12,
   },
-  buttonText: {
+  cancelButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#6B7280",
+  },
+  updateButton: {
+    flex: 2,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#1E3A8A",
+    paddingVertical: 16,
+    borderRadius: 12,
+    shadowColor: "#1E3A8A",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  updateButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
     color: "white",
-    fontWeight: "bold",
-    fontSize: 18,
+  },
+  disabledButton: {
+    backgroundColor: "#9CA3AF",
+    shadowOpacity: 0.1,
+  },
+  buttonIcon: {
+    marginRight: 8,
   },
 });
 

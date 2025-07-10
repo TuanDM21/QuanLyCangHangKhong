@@ -6,6 +6,8 @@ import {
   Alert,
   StyleSheet,
   TouchableOpacity,
+  ScrollView,
+  ActivityIndicator,
 } from "react-native";
 import { Picker } from "@react-native-picker/picker";
 import Layout from "../Common/Layout";
@@ -13,6 +15,7 @@ import DateTimePickerModal from "react-native-modal-datetime-picker";
 import httpApiClient from "../../services";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import SelectModal from "../../components/SelectModal";
+import { Ionicons } from "@expo/vector-icons";
 
 const UpdateUserFlightShiftScreen = () => {
   const navigation = useNavigation();
@@ -29,6 +32,7 @@ const UpdateUserFlightShiftScreen = () => {
   );
   const [flightInfo, setFlightInfo] = useState(null);
   const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Lấy danh sách chuyến bay khi đổi ngày
   useEffect(() => {
@@ -87,6 +91,8 @@ const UpdateUserFlightShiftScreen = () => {
       Alert.alert("Lỗi", "Không tìm thấy ID lịch trực chuyến bay!");
       return;
     }
+    
+    setIsLoading(true);
     try {
         await httpApiClient.put(`user-flight-shifts/${Number(scheduleId)}`, {
             method: "PUT",
@@ -101,73 +107,156 @@ const UpdateUserFlightShiftScreen = () => {
       ]);
     } catch (error) {
       Alert.alert("Lỗi", error.message || "Cập nhật thất bại");
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
     <Layout>
-      <View style={styles.container}>
-        <Text style={styles.title}>Cập nhật chuyến bay trực</Text>
-
-        {/* Hiển thị tên nhân viên */}
-        <Text style={styles.label}>Nhân viên:</Text>
-        <View style={styles.input}>
-          <Text style={{ color: "#222" }}>
-            {schedule.userName || "N/A"}
-          </Text>
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={styles.container}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Header Section */}
+        <View style={styles.headerSection}>
+          <View style={styles.titleIcon}>
+            <Ionicons name="airplane" size={24} color="#1E3A8A" />
+          </View>
+          <Text style={styles.title}>Cập nhật chuyến bay trực</Text>
         </View>
 
-        <Text style={styles.label}>Chọn ngày:</Text>
-        <TouchableOpacity onPress={showDatePicker} activeOpacity={1}>
-          <View style={styles.input}>
-            <Text style={{ color: shiftDate ? "#222" : "#aaa" }}>
-              {shiftDate || "Chọn ngày"}
-            </Text>
+        {/* User Info Card */}
+        <View style={styles.userCard}>
+          <View style={styles.userHeader}>
+            <Ionicons name="person" size={20} color="#1E3A8A" />
+            <Text style={styles.userTitle}>Thông tin nhân viên</Text>
           </View>
-        </TouchableOpacity>
+          <View style={styles.userInfo}>
+            <Text style={styles.userName}>{schedule.userName || "N/A"}</Text>
+          </View>
+        </View>
+
+        {/* Form Card */}
+        <View style={styles.formCard}>
+          {/* Date Selection */}
+          <View style={styles.inputSection}>
+            <Text style={styles.label}>
+              <Ionicons name="calendar" size={16} color="#1E3A8A" /> Chọn ngày
+            </Text>
+            <TouchableOpacity
+              style={styles.dateButton}
+              onPress={showDatePicker}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="calendar-outline" size={20} color="#6B7280" style={styles.dateIcon} />
+              <Text style={[styles.dateText, !shiftDate && styles.placeholderText]}>
+                {shiftDate || "Chọn ngày"}
+              </Text>
+              <Ionicons name="chevron-down" size={20} color="#6B7280" />
+            </TouchableOpacity>
+          </View>
+
+          {/* Flight Selection */}
+          <View style={styles.inputSection}>
+            <Text style={styles.label}>
+              <Ionicons name="airplane" size={16} color="#1E3A8A" /> Chọn chuyến bay
+            </Text>
+            <SelectModal
+              data={flights.map(f => ({ 
+                label: `${f.flightNumber} (${f.departureAirport?.airportCode} → ${f.arrivalAirport?.airportCode})`, 
+                value: f.id?.toString() 
+              }))}
+              value={selectedFlightId}
+              onChange={setSelectedFlightId}
+              placeholder="Chọn chuyến bay"
+              title="Chọn chuyến bay"
+            />
+          </View>
+
+          {/* Flight Info Display */}
+          {flightInfo && (
+            <View style={styles.flightInfoCard}>
+              <View style={styles.flightInfoHeader}>
+                <Ionicons name="information-circle" size={20} color="#10B981" />
+                <Text style={styles.flightInfoTitle}>Chi tiết chuyến bay</Text>
+              </View>
+              
+              <View style={styles.flightDetails}>
+                <View style={styles.flightDetailRow}>
+                  <Ionicons name="bookmark" size={16} color="#6B7280" />
+                  <Text style={styles.detailLabel}>Số hiệu:</Text>
+                  <Text style={styles.detailValue}>{flightInfo.flightNumber}</Text>
+                </View>
+                
+                <View style={styles.flightDetailRow}>
+                  <Ionicons name="airplane" size={16} color="#6B7280" />
+                  <Text style={styles.detailLabel}>Sân bay đi:</Text>
+                  <Text style={styles.detailValue}>
+                    {flightInfo.departureAirport?.airportCode} - {flightInfo.departureAirport?.airportName}
+                  </Text>
+                </View>
+                
+                <View style={styles.flightDetailRow}>
+                  <Ionicons name="location" size={16} color="#6B7280" />
+                  <Text style={styles.detailLabel}>Sân bay đến:</Text>
+                  <Text style={styles.detailValue}>
+                    {flightInfo.arrivalAirport?.airportCode} - {flightInfo.arrivalAirport?.airportName}
+                  </Text>
+                </View>
+                
+                <View style={styles.flightDetailRow}>
+                  <Ionicons name="time" size={16} color="#6B7280" />
+                  <Text style={styles.detailLabel}>Giờ cất cánh:</Text>
+                  <Text style={styles.detailValue}>{flightInfo.departureTime}</Text>
+                </View>
+                
+                <View style={styles.flightDetailRow}>
+                  <Ionicons name="time" size={16} color="#6B7280" />
+                  <Text style={styles.detailLabel}>Giờ hạ cánh:</Text>
+                  <Text style={styles.detailValue}>{flightInfo.arrivalTime}</Text>
+                </View>
+              </View>
+            </View>
+          )}
+        </View>
+
+        {/* Action Buttons */}
+        <View style={styles.actionSection}>
+          <TouchableOpacity 
+            style={styles.cancelButton} 
+            onPress={() => navigation.goBack()}
+            disabled={isLoading}
+          >
+            <Ionicons name="close-circle" size={20} color="#6B7280" style={styles.buttonIcon} />
+            <Text style={styles.cancelButtonText}>Hủy bỏ</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={[styles.updateButton, isLoading && styles.disabledButton]} 
+            onPress={handleUpdate}
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <ActivityIndicator size="small" color="white" style={styles.buttonIcon} />
+            ) : (
+              <Ionicons name="checkmark-circle" size={20} color="white" style={styles.buttonIcon} />
+            )}
+            <Text style={styles.updateButtonText}>
+              {isLoading ? "Đang cập nhật..." : "Cập nhật chuyến bay"}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Date Picker Modal */}
         <DateTimePickerModal
           isVisible={isDatePickerVisible}
           mode="date"
           onConfirm={handleConfirmDate}
           onCancel={hideDatePicker}
         />
-
-        <Text style={styles.label}>Chọn chuyến bay:</Text>
-        <SelectModal
-          data={flights.map(f => ({ label: `${f.flightNumber} (${f.departureAirport?.airportCode} → ${f.arrivalAirport?.airportCode})`, value: f.id?.toString() }))}
-          value={selectedFlightId}
-          onChange={setSelectedFlightId}
-          placeholder="Chọn chuyến bay"
-          title="Chọn chuyến bay"
-        />
-
-        {flightInfo && (
-          <View style={styles.flightInfo}>
-            <Text style={styles.infoText}>
-              <Text style={styles.infoLabel}>Số hiệu: </Text>
-              {flightInfo.flightNumber}
-            </Text>
-            <Text style={styles.infoText}>
-              <Text style={styles.infoLabel}>Sân bay đi: </Text>
-              {flightInfo.departureAirport?.airportCode} - {flightInfo.departureAirport?.airportName}
-            </Text>
-            <Text style={styles.infoText}>
-              <Text style={styles.infoLabel}>Sân bay đến: </Text>
-              {flightInfo.arrivalAirport?.airportCode} - {flightInfo.arrivalAirport?.airportName}
-            </Text>
-            <Text style={styles.infoText}>
-              <Text style={styles.infoLabel}>Giờ cất cánh: </Text>
-              {flightInfo.departureTime}
-            </Text>
-            <Text style={styles.infoText}>
-              <Text style={styles.infoLabel}>Giờ hạ cánh: </Text>
-              {flightInfo.arrivalTime}
-            </Text>
-          </View>
-        )}
-
-        <Button title="CẬP NHẬT" onPress={handleUpdate} />
-      </View>
+      </ScrollView>
     </Layout>
   );
 };
@@ -175,49 +264,219 @@ const UpdateUserFlightShiftScreen = () => {
 export default UpdateUserFlightShiftScreen;
 
 const styles = StyleSheet.create({
+  scrollView: {
+    flex: 1,
+    backgroundColor: "#F8FAFC",
+  },
   container: {
     padding: 20,
-    backgroundColor: "#CFE2FF",
-    flex: 1,
+    paddingBottom: 100,
+  },
+
+  // Header Section
+  headerSection: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 24,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E2E8F0",
+  },
+  titleIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "#EEF2FF",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 16,
   },
   title: {
-    fontSize: 22,
-    fontWeight: "bold",
+    fontSize: 24,
+    fontWeight: "700",
+    color: "#1E3A8A",
+    flex: 1,
+  },
+
+  // User Card
+  userCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  userHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 12,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F3F4F6",
+  },
+  userTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#1E3A8A",
+    marginLeft: 8,
+  },
+  userInfo: {
+    backgroundColor: "#F0F9FF",
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#BAE6FD",
+  },
+  userName: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#0C4A6E",
+  },
+
+  // Form Card
+  formCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+    marginBottom: 24,
+  },
+
+  // Input Sections
+  inputSection: {
     marginBottom: 20,
-    textAlign: "center",
   },
   label: {
+    fontSize: 16,
     fontWeight: "600",
-    marginBottom: 5,
-    marginTop: 10,
+    color: "#374151",
+    marginBottom: 8,
+    flexDirection: "row",
+    alignItems: "center",
   },
-  input: {
-    backgroundColor: "white",
-    padding: 10,
-    borderRadius: 5,
-    marginBottom: 10,
+
+  // Date Button
+  dateButton: {
+    backgroundColor: "#FFFFFF",
+    padding: 16,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#ddd",
+    borderColor: "#D1D5DB",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
-  pickerContainer: {
+  dateIcon: {
+    marginRight: 12,
+  },
+  dateText: {
+    fontSize: 16,
+    color: "#374151",
+    fontWeight: "500",
+    flex: 1,
+  },
+  placeholderText: {
+    color: "#9CA3AF",
+  },
+
+  // Flight Info Card
+  flightInfoCard: {
+    backgroundColor: "#F0FDF4",
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 8,
     borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 5,
-    backgroundColor: "white",
-    marginBottom: 10,
+    borderColor: "#BBF7D0",
   },
-  flightInfo: {
-    backgroundColor: "#fff",
-    borderRadius: 5,
-    padding: 10,
-    marginBottom: 15,
-    marginTop: 10,
+  flightInfoHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 12,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: "#D1FAE5",
   },
-  infoText: {
+  flightInfoTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#065F46",
+    marginLeft: 8,
+  },
+  flightDetails: {
+    gap: 8,
+  },
+  flightDetailRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 4,
+  },
+  detailLabel: {
     fontSize: 14,
-    marginBottom: 4,
+    fontWeight: "500",
+    color: "#374151",
+    marginLeft: 8,
+    width: 100,
   },
-  infoLabel: {
+  detailValue: {
+    fontSize: 14,
+    color: "#065F46",
+    fontWeight: "500",
+    flex: 1,
+  },
+
+  // Action Section
+  actionSection: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  cancelButton: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#F9FAFB",
+    borderWidth: 1,
+    borderColor: "#D1D5DB",
+    paddingVertical: 16,
+    borderRadius: 12,
+  },
+  cancelButtonText: {
+    fontSize: 16,
     fontWeight: "600",
+    color: "#6B7280",
+  },
+  updateButton: {
+    flex: 2,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#10B981",
+    paddingVertical: 16,
+    borderRadius: 12,
+    shadowColor: "#10B981",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  updateButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "white",
+  },
+  disabledButton: {
+    backgroundColor: "#9CA3AF",
+    shadowOpacity: 0.1,
+  },
+  buttonIcon: {
+    marginRight: 8,
   },
 });
