@@ -18,7 +18,8 @@ import { useNavigation } from "@react-navigation/native";
 import { Picker } from "@react-native-picker/picker";
 import httpApiClient from "../../services";
 import SelectModal from "../../components/SelectModal";
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
+import { LinearGradient } from "expo-linear-gradient";
 
 const PARTICIPANT_TYPES = [
   { label: "User", value: "USER" },
@@ -210,129 +211,300 @@ export default function CreateActivityScreen() {
     <Layout>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
         <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled" style={{ flex: 1 }}>
-          <Text style={styles.title}>Tạo Activity mới</Text>
+          {/* Header với gradient */}
+          <LinearGradient
+            colors={['rgba(25,118,210,0.95)', 'rgba(13,71,161,0.98)']}
+            style={styles.headerGradient}
+          >
+            <View style={styles.headerContainer}>
+              <View style={styles.iconHeader}>
+                <MaterialCommunityIcons name="calendar-plus" size={28} color="white" />
+              </View>
+              <Text style={styles.title}>Tạo Hoạt Động Mới</Text>
+              <Text style={styles.subtitle}>Tạo và quản lý các hoạt động sân bay</Text>
+            </View>
+          </LinearGradient>
 
-          <Text style={styles.label}>Tên activity</Text>
-          <TextInput style={styles.input} placeholder="Nhập tên" value={name} onChangeText={setName} />
+          <View style={styles.formContainer}>
+            {/* Thông tin cơ bản */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>
+                <MaterialCommunityIcons name="information-outline" size={18} color="#007AFF" />
+                {" "}Thông tin cơ bản
+              </Text>
+              
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Tên hoạt động *</Text>
+                <View style={styles.inputContainer}>
+                  <Ionicons name="text-outline" size={20} color="#007AFF" style={styles.inputIcon} />
+                  <TextInput 
+                    style={styles.input} 
+                    placeholder="Nhập tên hoạt động" 
+                    value={name} 
+                    onChangeText={setName}
+                    placeholderTextColor="#9CA3AF"
+                  />
+                </View>
+              </View>
 
-          <Text style={styles.label}>Địa điểm</Text>
-          <TextInput style={styles.input} placeholder="Nhập địa điểm" value={location} onChangeText={setLocation} />
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Địa điểm *</Text>
+                <View style={styles.inputContainer}>
+                  <Ionicons name="location-outline" size={20} color="#007AFF" style={styles.inputIcon} />
+                  <TextInput 
+                    style={styles.input} 
+                    placeholder="Nhập địa điểm" 
+                    value={location} 
+                    onChangeText={setLocation}
+                    placeholderTextColor="#9CA3AF"
+                  />
+                </View>
+              </View>
 
-          <Text style={styles.label}>Thời gian bắt đầu</Text>
-          <TouchableOpacity style={styles.timePicker} onPress={() => setIsStartPickerVisible(true)}>
-            <Text style={styles.timeText}>{formatDateTime(startTime)}</Text>
-          </TouchableOpacity>
-          <DateTimePickerModal isVisible={isStartPickerVisible} mode="datetime" is24Hour
-            onConfirm={(d) => { setStartTime(d); setIsStartPickerVisible(false); }}
-            onCancel={() => setIsStartPickerVisible(false)} />
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Ghi chú</Text>
+                <View style={[styles.inputContainer, styles.textAreaContainer]}>
+                  <Ionicons name="document-text-outline" size={20} color="#007AFF" style={[styles.inputIcon, styles.textAreaIcon]} />
+                  <TextInput 
+                    style={[styles.input, styles.textArea]} 
+                    placeholder="Nhập ghi chú (tùy chọn)" 
+                    value={notes} 
+                    onChangeText={setNotes} 
+                    multiline
+                    placeholderTextColor="#9CA3AF"
+                  />
+                </View>
+              </View>
+            </View>
 
-          <Text style={styles.label}>Thời gian kết thúc</Text>
-          <TouchableOpacity style={styles.timePicker} onPress={() => setIsEndPickerVisible(true)}>
-            <Text style={styles.timeText}>{formatDateTime(endTime)}</Text>
-          </TouchableOpacity>
-          <DateTimePickerModal isVisible={isEndPickerVisible} mode="datetime" is24Hour
-            onConfirm={(d) => { if (d > startTime) setEndTime(d); else Alert.alert("Lỗi","Thời gian kết thúc phải lớn hơn thời gian bắt đầu!"); setIsEndPickerVisible(false); }}
-            onCancel={() => setIsEndPickerVisible(false)} />
+            {/* Thời gian */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>
+                <Ionicons name="time-outline" size={18} color="#007AFF" />
+                {" "}Thời gian
+              </Text>
+              
+              <View style={styles.timeRow}>
+                <View style={styles.timeItem}>
+                  <Text style={styles.label}>Bắt đầu *</Text>
+                  <TouchableOpacity style={styles.timePicker} onPress={() => setIsStartPickerVisible(true)}>
+                    <Ionicons name="calendar" size={20} color="#007AFF" style={styles.timeIcon} />
+                    <Text style={styles.timeText}>{formatDateTime(startTime)}</Text>
+                  </TouchableOpacity>
+                </View>
+                
+                <View style={styles.timeItem}>
+                  <Text style={styles.label}>Kết thúc *</Text>
+                  <TouchableOpacity style={styles.timePicker} onPress={() => setIsEndPickerVisible(true)}>
+                    <Ionicons name="calendar" size={20} color="#007AFF" style={styles.timeIcon} />
+                    <Text style={styles.timeText}>{formatDateTime(endTime)}</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
 
-          <Text style={styles.label}>Ghi chú</Text>
-          <TextInput style={[styles.input, styles.textArea]} placeholder="Nhập ghi chú" value={notes} onChangeText={setNotes} multiline />
+            <DateTimePickerModal 
+              isVisible={isStartPickerVisible} 
+              mode="datetime" 
+              is24Hour
+              onConfirm={(d) => { setStartTime(d); setIsStartPickerVisible(false); }}
+              onCancel={() => setIsStartPickerVisible(false)} 
+            />
 
-          <Text style={styles.label}>Thành phần tham gia</Text>
-          <View style={styles.row}>
-            {PARTICIPANT_TYPES.map((opt) => (
-              <TouchableOpacity key={opt.value} style={[styles.typeBtn, participantType===opt.value&&styles.typeBtnActive]} onPress={()=>setParticipantType(opt.value)}>
-                <Text style={{color:participantType===opt.value?"#fff":"#007AFF",fontWeight:"bold"}}>{opt.label}</Text>
+            <DateTimePickerModal 
+              isVisible={isEndPickerVisible} 
+              mode="datetime" 
+              is24Hour
+              onConfirm={(d) => { 
+                if (d > startTime) setEndTime(d); 
+                else Alert.alert("Lỗi","Thời gian kết thúc phải lớn hơn thời gian bắt đầu!"); 
+                setIsEndPickerVisible(false); 
+              }}
+              onCancel={() => setIsEndPickerVisible(false)} 
+            />
+
+            {/* Người tham gia */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>
+                <MaterialCommunityIcons name="account-group" size={18} color="#007AFF" />
+                {" "}Người tham gia
+              </Text>
+
+              <Text style={styles.label}>Loại thành phần</Text>
+              <View style={styles.participantTypeRow}>
+                {PARTICIPANT_TYPES.map((opt) => (
+                  <TouchableOpacity 
+                    key={opt.value} 
+                    style={[styles.typeBtn, participantType === opt.value && styles.typeBtnActive]} 
+                    onPress={() => setParticipantType(opt.value)}
+                  >
+                    <Text style={[styles.typeBtnText, participantType === opt.value && styles.typeBtnActiveText]}>
+                      {opt.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {participantType === "USER" && (
+                <View style={styles.userSection}>
+                  <View style={styles.inputGroup}>
+                    <View style={styles.inputContainer}>
+                      <Ionicons name="search-outline" size={20} color="#007AFF" style={styles.inputIcon} />
+                      <TextInput 
+                        style={styles.input} 
+                        placeholder="Tìm kiếm người dùng..." 
+                        value={userSearch} 
+                        onChangeText={setUserSearch}
+                        placeholderTextColor="#9CA3AF"
+                      />
+                    </View>
+                  </View>
+                  
+                  {/* Danh sách user đã chọn */}
+                  {selectedUsers.length > 0 && (
+                    <View style={styles.selectedUsersContainer}>
+                      <Text style={styles.selectedUsersTitle}>
+                        <MaterialCommunityIcons name="account-check" size={16} color="#10B981" />
+                        {" "}Đã chọn ({selectedUsers.length})
+                      </Text>
+                      {selectedUsers.map(u => (
+                        <View key={u.id} style={styles.selectedUserCard}>
+                          <View style={styles.userAvatar}>
+                            <Text style={styles.userAvatarText}>
+                              {u.name?.charAt(0).toUpperCase() || "U"}
+                            </Text>
+                          </View>
+                          <Text style={styles.selectedUserName} numberOfLines={1}>
+                            {u.name}
+                          </Text>
+                          <TouchableOpacity 
+                            onPress={() => toggleSelectUser(u)} 
+                            style={styles.removeUserBtn}
+                          >
+                            <Ionicons name="close-circle" size={22} color="#EF4444" />
+                          </TouchableOpacity>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                </View>
+              )}
+
+              {participantType === "TEAM" && (
+                <View style={styles.inputGroup}>
+                  <SelectModal
+                    label="Chọn nhóm"
+                    data={teams.map(t => ({ label: t.teamName, value: t.id }))}
+                    value={selectedTeam?.id || ""}
+                    onChange={id => setSelectedTeam(teams.find(t => t.id === id) || null)}
+                    placeholder="Chọn nhóm"
+                    title="Chọn nhóm"
+                  />
+                </View>
+              )}
+
+              {participantType === "UNIT" && (
+                <View style={styles.inputGroup}>
+                  <SelectModal
+                    label="Chọn đơn vị"
+                    data={units.map(u => ({ label: u.unitName, value: u.id }))}
+                    value={selectedUnit?.id || ""}
+                    onChange={id => setSelectedUnit(units.find(u => u.id === id) || null)}
+                    placeholder="Chọn đơn vị"
+                    title="Chọn đơn vị"
+                  />
+                </View>
+              )}
+
+              <TouchableOpacity style={styles.addParticipantBtn} onPress={handleAddParticipant}>
+                <LinearGradient
+                  colors={['#10B981', '#059669']}
+                  style={styles.addParticipantGradient}
+                >
+                  <MaterialCommunityIcons name="account-plus" size={20} color="white" />
+                  <Text style={styles.addParticipantText}>Thêm người tham gia</Text>
+                </LinearGradient>
               </TouchableOpacity>
-            ))}
-          </View>
 
-          {participantType === "USER" && (
-            <>
-              <TextInput style={styles.input} placeholder="Tìm kiếm user..." value={userSearch} onChangeText={setUserSearch} />
-              {/* Danh sách user đã chọn */}
-              {selectedUsers.length > 0 && (
-                <View style={{marginBottom:10}}>
-                  {selectedUsers.map(u => (
-                    <TouchableOpacity
-                      key={u.id}
-                      activeOpacity={0.85}
-                      style={{
-                        flexDirection:'row',alignItems:'center',marginBottom:8,
-                        backgroundColor:'#f7fafd',borderRadius:16,paddingVertical:8,paddingHorizontal:12,
-                        borderWidth:1.5,borderColor:'#b3d4fc',
-                        shadowColor:'#007AFF',shadowOpacity:0.06,shadowRadius:2,elevation:1
-                      }}
-                    >
-                      <View style={{width:30,height:30,borderRadius:15,backgroundColor:'#b3d4fc',alignItems:'center',justifyContent:'center',marginRight:10}}>
-                        <Text style={{color:'#2266aa',fontWeight:'bold',fontSize:16}}>{u.name?.charAt(0).toUpperCase()||"U"}</Text>
+              {/* Danh sách kết quả tìm kiếm user */}
+              {participantType === "USER" && userResults.length > 0 && (
+                <View style={styles.searchResultsContainer}>
+                  <Text style={styles.searchResultsTitle}>Kết quả tìm kiếm</Text>
+                  <FlatList 
+                    data={userResults} 
+                    keyExtractor={i => i.id.toString()} 
+                    scrollEnabled={false} 
+                    nestedScrollEnabled={false}
+                    style={styles.searchResultsList}
+                    renderItem={({ item }) => {
+                      const isSelected = selectedUsers.some(u => u.id === item.id);
+                      return (
+                        <TouchableOpacity 
+                          style={[styles.searchResultItem, isSelected && styles.searchResultItemSelected]} 
+                          onPress={() => toggleSelectUser(item)}
+                        >
+                          <View style={styles.searchResultContent}>
+                            <View style={[styles.userAvatar, styles.searchUserAvatar]}>
+                              <Text style={styles.userAvatarText}>
+                                {item.name?.charAt(0).toUpperCase() || "U"}
+                              </Text>
+                            </View>
+                            <Text style={styles.searchResultText}>{item.name}</Text>
+                            {isSelected && (
+                              <Ionicons name="checkmark-circle" size={20} color="#10B981" />
+                            )}
+                          </View>
+                        </TouchableOpacity>
+                      );
+                    }}
+                  />
+                </View>
+              )}
+
+              {/* Danh sách người tham gia đã thêm */}
+              {participants.length > 0 && (
+                <View style={styles.participantsContainer}>
+                  <Text style={styles.participantsTitle}>
+                    <MaterialCommunityIcons name="account-group" size={16} color="#007AFF" />
+                    {" "}Danh sách tham gia ({participants.length})
+                  </Text>
+                  {participants.map((p, idx) => (
+                    <View style={styles.participantCard} key={idx}>
+                      <View style={styles.participantInfo}>
+                        <MaterialCommunityIcons 
+                          name={p.participantType === "USER" ? "account" : p.participantType === "TEAM" ? "account-group" : "domain"} 
+                          size={20} 
+                          color="#007AFF" 
+                        />
+                        <Text style={styles.participantName}>{p.participantName}</Text>
+                        <View style={styles.participantTypeBadge}>
+                          <Text style={styles.participantTypeText}>{p.participantType}</Text>
+                        </View>
                       </View>
-                      <Text style={{flex:1,fontWeight:'600',fontSize:15,color:'#222'}} numberOfLines={1}>{u.name}</Text>
-                      <TouchableOpacity onPress={()=>toggleSelectUser(u)} style={{marginLeft:8}}>
-                        <Ionicons name="close-circle" size={22} color="#FF3B30" />
+                      <TouchableOpacity 
+                        onPress={() => handleRemoveParticipant(idx)} 
+                        style={styles.removeParticipantBtn}
+                      >
+                        <Ionicons name="trash-outline" size={18} color="#EF4444" />
                       </TouchableOpacity>
-                    </TouchableOpacity>
+                    </View>
                   ))}
                 </View>
               )}
-            </>
-          )}
+            </View>
 
-          {participantType === "TEAM" && (
-            <SelectModal
-              label="Chọn team"
-              data={teams.map(t => ({ label: t.teamName, value: t.id }))}
-              value={selectedTeam?.id || ""}
-              onChange={id => setSelectedTeam(teams.find(t => t.id === id) || null)}
-              placeholder="Chọn team"
-              title="Chọn team"
-            />
-          )}
-
-          {participantType === "UNIT" && (
-            <SelectModal
-              label="Chọn unit"
-              data={units.map(u => ({ label: u.unitName, value: u.id }))}
-              value={selectedUnit?.id || ""}
-              onChange={id => setSelectedUnit(units.find(u => u.id === id) || null)}
-              placeholder="Chọn unit"
-              title="Chọn unit"
-            />
-          )}
-
-          <TouchableOpacity style={{backgroundColor:'#007AFF',borderRadius:8,paddingVertical:13,alignItems:'center',marginTop:8,marginBottom:8,shadowColor:'#000',shadowOffset:{width:0,height:2},shadowOpacity:0.12,shadowRadius:3,elevation:2}} onPress={handleAddParticipant}>
-            <Text style={{color:'white',fontWeight:'bold',fontSize:16,letterSpacing:1}}>Thêm người tham gia</Text>
-          </TouchableOpacity>
-
-          {participantType==="USER" && userResults.length>0 && (
-            <FlatList data={userResults} keyExtractor={i=>i.id.toString()} scrollEnabled={false} nestedScrollEnabled={false}
-              style={{maxHeight:150,marginVertical:10}}
-              renderItem={({item})=>{
-                const sel=selectedUsers.some(u=>u.id===item.id);
-                return (
-                  <TouchableOpacity style={styles.resultItem} onPress={()=>toggleSelectUser(item)}>
-                    <View style={styles.resultRow}>
-                      <Text style={styles.resultText}>{item.name}</Text>
-                      {sel&&<Text style={styles.checkMark}>✓</Text>}
-                    </View>
-                  </TouchableOpacity>
-                );
-              }}
-            />
-          )}
-
-          <View style={{marginVertical:10}}>
-            {participants.map((p,idx)=>(
-              <View style={styles.partRow} key={idx}>
-                <Text style={styles.partText}>{p.participantName}</Text>
-                <TouchableOpacity onPress={()=>handleRemoveParticipant(idx)}><Text style={styles.removeText}>Xóa</Text></TouchableOpacity>
-              </View>
-            ))}
-          </View>
-
-          <View style={{marginTop:20}}>
-            <TouchableOpacity style={{backgroundColor:'#007AFF',borderRadius:8,paddingVertical:15,alignItems:'center',shadowColor:'#000',shadowOffset:{width:0,height:2},shadowOpacity:0.12,shadowRadius:3,elevation:2}} onPress={handleSubmit}>
-              <Text style={{color:'white',fontWeight:'bold',fontSize:18,letterSpacing:1}}>Tạo activity</Text>
-            </TouchableOpacity>
+            {/* Nút tạo hoạt động */}
+            <View style={styles.submitContainer}>
+              <TouchableOpacity style={styles.submitBtn} onPress={handleSubmit}>
+                <LinearGradient
+                  colors={['#007AFF', '#0056CC']}
+                  style={styles.submitGradient}
+                >
+                  <MaterialCommunityIcons name="check-circle" size={24} color="white" />
+                  <Text style={styles.submitText}>Tạo Hoạt Động</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -341,21 +513,386 @@ export default function CreateActivityScreen() {
 }
 
 const styles = StyleSheet.create({
-  container:{padding:20,backgroundColor:"#CFE2FF",paddingBottom:120},
-  title:{fontSize:24,fontWeight:"bold",color:"#007AFF",textAlign:"center",marginBottom:20},
-  label:{fontSize:15,fontWeight:"600",marginBottom:5},
-  input:{height:48,borderWidth:1,borderColor:"#e3e8ef",borderRadius:8,paddingHorizontal:12,backgroundColor:"#fff",marginBottom:15,justifyContent:"center",shadowColor:"#000",shadowOffset:{width:0,height:1},shadowOpacity:0.06,shadowRadius:2,elevation:1},
-  textArea:{height:80,textAlignVertical:"top"},
-  timePicker:{backgroundColor:"#fff",borderWidth:1,borderColor:"#007AFF",borderRadius:8,padding:12,alignItems:"center",marginBottom:15,shadowColor:"#000",shadowOffset:{width:0,height:2},shadowOpacity:0.1,shadowRadius:3,elevation:2},
-  timeText:{fontSize:16,color:"#007AFF",fontWeight:"600"},
-  row:{flexDirection:"row",marginBottom:10},
-  typeBtn:{flex:1,borderWidth:1,borderColor:"#007AFF",borderRadius:8,padding:10,marginHorizontal:2,alignItems:"center",backgroundColor:"#fff",shadowColor:"#000",shadowOffset:{width:0,height:1},shadowOpacity:0.05,shadowRadius:1,elevation:1},
-  typeBtnActive:{backgroundColor:"#007AFF"},
-  resultItem:{paddingVertical:8,paddingHorizontal:12,borderBottomWidth:1,borderBottomColor:"#e3e8ef",backgroundColor:"#fff",borderRadius:8,marginBottom:4,shadowColor:"#000",shadowOffset:{width:0,height:1},shadowOpacity:0.05,shadowRadius:1,elevation:1},
-  resultRow:{flexDirection:"row",justifyContent:"space-between",alignItems:"center"},
-  resultText:{flex:1},
-  checkMark:{fontSize:18,color:"#007AFF",marginLeft:8},
-  partRow:{flexDirection:"row",alignItems:"center",marginBottom:5},
-  partText:{flex:1},
-  removeText:{color:"red"},
+  container: {
+    flexGrow: 1,
+    backgroundColor: "#F8FAFC",
+  },
+  
+  // Header styles
+  headerGradient: {
+    paddingTop: 20,
+    paddingBottom: 30,
+    paddingHorizontal: 20,
+    marginBottom: 0,
+  },
+  headerContainer: {
+    alignItems: "center",
+  },
+  iconHeader: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+  },
+  title: {
+    fontSize: 26,
+    fontWeight: "bold",
+    color: "white",
+    textAlign: "center",
+    marginBottom: 8,
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
+    letterSpacing: 0.5,
+  },
+  subtitle: {
+    fontSize: 16,
+    color: "rgba(255, 255, 255, 0.9)",
+    textAlign: "center",
+    maxWidth: '80%',
+  },
+  
+  // Form container
+  formContainer: {
+    flex: 1,
+    backgroundColor: "#F8FAFC",
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 40,
+  },
+  
+  // Section styles
+  section: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#1F2937",
+    marginBottom: 16,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  
+  // Input styles
+  inputGroup: {
+    marginBottom: 16,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#374151",
+    marginBottom: 8,
+  },
+  inputContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#D1D5DB",
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    minHeight: 56,
+  },
+  inputIcon: {
+    marginRight: 12,
+  },
+  input: {
+    flex: 1,
+    fontSize: 16,
+    color: "#374151",
+    paddingVertical: 0,
+  },
+  
+  // Text area
+  textAreaContainer: {
+    alignItems: "flex-start",
+    minHeight: 120,
+    paddingVertical: 16,
+  },
+  textAreaIcon: {
+    alignSelf: "flex-start",
+    marginTop: 2,
+  },
+  textArea: {
+    minHeight: 80,
+    textAlignVertical: "top",
+  },
+  
+  // Time picker
+  timeRow: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  timeItem: {
+    flex: 1,
+  },
+  timePicker: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#D1D5DB",
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    minHeight: 56,
+  },
+  timeIcon: {
+    marginRight: 12,
+  },
+  timeText: {
+    fontSize: 16,
+    color: "#374151",
+    fontWeight: "500",
+  },
+  
+  // Participant type selection
+  participantTypeRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 16,
+  },
+  typeBtn: {
+    flex: 1,
+    borderWidth: 2,
+    borderColor: "#D1D5DB",
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+  },
+  typeBtnActive: {
+    borderColor: "#007AFF",
+    backgroundColor: "#F0F9FF",
+  },
+  typeBtnText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#6B7280",
+  },
+  typeBtnActiveText: {
+    color: "#007AFF",
+  },
+  
+  // User section
+  userSection: {
+    marginTop: 8,
+  },
+  
+  // Selected users
+  selectedUsersContainer: {
+    marginTop: 16,
+  },
+  selectedUsersTitle: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#374151",
+    marginBottom: 12,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  selectedUserCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F0FDF4",
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: "#BBF7D0",
+  },
+  userAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#007AFF",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+  },
+  userAvatarText: {
+    color: "white",
+    fontWeight: "bold",
+    fontSize: 16,
+  },
+  selectedUserName: {
+    flex: 1,
+    fontWeight: "600",
+    fontSize: 15,
+    color: "#374151",
+  },
+  removeUserBtn: {
+    marginLeft: 8,
+  },
+  
+  // Add participant button
+  addParticipantBtn: {
+    borderRadius: 12,
+    overflow: "hidden",
+    marginTop: 8,
+    shadowColor: "#10B981",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  addParticipantGradient: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+  },
+  addParticipantText: {
+    color: "white",
+    fontWeight: "700",
+    fontSize: 16,
+    marginLeft: 8,
+    letterSpacing: 0.5,
+  },
+  
+  // Search results
+  searchResultsContainer: {
+    marginTop: 16,
+    backgroundColor: "#F9FAFB",
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+  searchResultsTitle: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#374151",
+    marginBottom: 12,
+  },
+  searchResultsList: {
+    maxHeight: 200,
+  },
+  searchResultItem: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 8,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+  searchResultItemSelected: {
+    borderColor: "#10B981",
+    backgroundColor: "#F0FDF4",
+  },
+  searchResultContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 12,
+  },
+  searchUserAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    marginRight: 12,
+  },
+  searchResultText: {
+    flex: 1,
+    fontSize: 14,
+    color: "#374151",
+    fontWeight: "500",
+  },
+  
+  // Participants list
+  participantsContainer: {
+    marginTop: 20,
+  },
+  participantsTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#374151",
+    marginBottom: 12,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  participantCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#F8FAFC",
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+  participantInfo: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  participantName: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: "500",
+    color: "#374151",
+    marginLeft: 12,
+  },
+  participantTypeBadge: {
+    backgroundColor: "#EBF8FF",
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    marginLeft: 8,
+  },
+  participantTypeText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#007AFF",
+  },
+  removeParticipantBtn: {
+    padding: 8,
+  },
+  
+  // Submit button
+  submitContainer: {
+    marginTop: 20,
+  },
+  submitBtn: {
+    borderRadius: 16,
+    overflow: "hidden",
+    shadowColor: "#007AFF",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  submitGradient: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 18,
+    paddingHorizontal: 32,
+  },
+  submitText: {
+    color: "white",
+    fontWeight: "700",
+    fontSize: 18,
+    marginLeft: 12,
+    letterSpacing: 0.5,
+  },
 });

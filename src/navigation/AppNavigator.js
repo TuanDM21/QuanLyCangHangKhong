@@ -45,6 +45,7 @@ import SearchActivityScreen from "../screens/Activity/SearchActivityScreen";
 import EditActivityScreen from "../screens/Activity/EditActivityScreen";
 import MyActivitiesScreen from "../screens/Activity/MyActivitiesScreen";
 
+
 // Notification screens
 import NotificationScreen from "../screens/Notification/NotificationScreen";
 import NotificationCenterScreen from "../screens/Notification/NotificationCenterScreen";
@@ -90,7 +91,6 @@ const AppNavigator = () => {
             <Stack.Screen name="LiveTrackingMapScreen" component={LiveTrackingMapScreen} />
             <Stack.Screen name="MyShiftScreen" component={MyShiftScreen} />
             <Stack.Screen name="NotificationCenterScreen" component={NotificationCenterScreen} />
-            
 
             
           </>

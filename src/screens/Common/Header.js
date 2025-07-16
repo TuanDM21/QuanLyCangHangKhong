@@ -21,7 +21,11 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 const { width } = Dimensions.get('window');
 
 const BACKEND_URL = "http://10.0.10.32:8080";
-// const BACKEND_URL = "http://192.168.1.17:8080";
+// const BACKEND_URL = "http://192.168.1.6:8080";
+// const BACKEND_URL = "http://172.20.10.2:8080";
+
+
+
 
 const Header = () => {
   const [notificationModalVisible, setNotificationModalVisible] = useState(false);

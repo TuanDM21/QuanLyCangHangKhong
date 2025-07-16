@@ -11,6 +11,7 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  SafeAreaView,
 } from "react-native";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import Layout from "../Common/Layout";
@@ -185,143 +186,496 @@ export default function EditActivityScreen() {
 
   return (
     <Layout>
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
-        <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled" style={{ flex: 1 }}>
-          <Text style={styles.title}>Sửa Activity</Text>
+      <SafeAreaView style={styles.safeArea}>
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+          <ScrollView 
+            contentContainerStyle={styles.container} 
+            keyboardShouldPersistTaps="handled" 
+            style={{ flex: 1 }}
+            showsVerticalScrollIndicator={false}
+          >
+            {/* Header */}
+            <View style={styles.header}>
+              <Text style={styles.title}>Chỉnh sửa hoạt động</Text>
+              <Text style={styles.subtitle}>Cập nhật thông tin hoạt động của bạn</Text>
+            </View>
 
-          <Text style={styles.label}>Tên activity</Text>
-          <TextInput style={styles.input} placeholder="Nhập tên" value={name} onChangeText={setName} />
+            {/* Main Form */}
+            <View style={styles.formContainer}>
+              {/* Basic Information Section */}
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Thông tin cơ bản</Text>
+                
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Tên hoạt động</Text>
+                  <TextInput 
+                    style={styles.input} 
+                    placeholder="Nhập tên hoạt động" 
+                    value={name} 
+                    onChangeText={setName}
+                    placeholderTextColor="#9CA3AF"
+                  />
+                </View>
 
-          <Text style={styles.label}>Địa điểm</Text>
-          <TextInput style={styles.input} placeholder="Nhập địa điểm" value={location} onChangeText={setLocation} />
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Địa điểm</Text>
+                  <TextInput 
+                    style={styles.input} 
+                    placeholder="Nhập địa điểm" 
+                    value={location} 
+                    onChangeText={setLocation}
+                    placeholderTextColor="#9CA3AF"
+                  />
+                </View>
 
-          <Text style={styles.label}>Thời gian bắt đầu</Text>
-          <TouchableOpacity style={styles.timePicker} onPress={() => setIsStartPickerVisible(true)}>
-            <Text style={styles.timeText}>{formatDateTime(startTime)}</Text>
-          </TouchableOpacity>
-          <DateTimePickerModal isVisible={isStartPickerVisible} mode="datetime" is24Hour
-            onConfirm={(d) => { setStartTime(d); setIsStartPickerVisible(false); }}
-            onCancel={() => setIsStartPickerVisible(false)} />
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Ghi chú</Text>
+                  <TextInput 
+                    style={[styles.input, styles.textArea]} 
+                    placeholder="Nhập ghi chú (tùy chọn)" 
+                    value={notes} 
+                    onChangeText={setNotes} 
+                    multiline
+                    placeholderTextColor="#9CA3AF"
+                  />
+                </View>
+              </View>
 
-          <Text style={styles.label}>Thời gian kết thúc</Text>
-          <TouchableOpacity style={styles.timePicker} onPress={() => setIsEndPickerVisible(true)}>
-            <Text style={styles.timeText}>{formatDateTime(endTime)}</Text>
-          </TouchableOpacity>
-          <DateTimePickerModal isVisible={isEndPickerVisible} mode="datetime" is24Hour
-            onConfirm={(d) => { if (d > startTime) setEndTime(d); else Alert.alert("Lỗi","Thời gian kết thúc phải lớn hơn thời gian bắt đầu!"); setIsEndPickerVisible(false); }}
-            onCancel={() => setIsEndPickerVisible(false)} />
+              {/* Time Section */}
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Thời gian</Text>
+                
+                <View style={styles.timeRow}>
+                  <View style={styles.timeItem}>
+                    <Text style={styles.label}>Bắt đầu</Text>
+                    <TouchableOpacity style={styles.timePicker} onPress={() => setIsStartPickerVisible(true)}>
+                      <Text style={styles.timeText}>{formatDateTime(startTime)}</Text>
+                    </TouchableOpacity>
+                  </View>
+                  
+                  <View style={styles.timeItem}>
+                    <Text style={styles.label}>Kết thúc</Text>
+                    <TouchableOpacity style={styles.timePicker} onPress={() => setIsEndPickerVisible(true)}>
+                      <Text style={styles.timeText}>{formatDateTime(endTime)}</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
 
-          <Text style={styles.label}>Ghi chú</Text>
-          <TextInput style={[styles.input, styles.textArea]} placeholder="Nhập ghi chú" value={notes} onChangeText={setNotes} multiline />
+              {/* Participants Section */}
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Người tham gia</Text>
+                
+                <View style={styles.participantTypeContainer}>
+                  <Text style={styles.label}>Loại người tham gia</Text>
+                  <View style={styles.typeButtonRow}>
+                    {PARTICIPANT_TYPES.map((opt) => (
+                      <TouchableOpacity 
+                        key={opt.value} 
+                        style={[styles.typeBtn, participantType === opt.value && styles.typeBtnActive]} 
+                        onPress={() => setParticipantType(opt.value)}
+                      >
+                        <Text style={[
+                          styles.typeBtnText,
+                          participantType === opt.value && styles.typeBtnTextActive
+                        ]}>
+                          {opt.label}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
 
-          <Text style={styles.label}>Loại người tham gia</Text>
-          <View style={styles.row}>
-            {PARTICIPANT_TYPES.map((opt) => (
-              <TouchableOpacity key={opt.value} style={[styles.typeBtn, participantType===opt.value&&styles.typeBtnActive]} onPress={()=>setParticipantType(opt.value)}>
-                <Text style={{color:participantType===opt.value?"#fff":"#007AFF",fontWeight:"bold"}}>{opt.label}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+                {participantType === "USER" && (
+                  <View style={styles.inputGroup}>
+                    <TextInput 
+                      style={styles.input} 
+                      placeholder="Tìm kiếm người dùng..." 
+                      value={userSearch} 
+                      onChangeText={setUserSearch}
+                      placeholderTextColor="#9CA3AF"
+                    />
+                  </View>
+                )}
 
-          {participantType==="USER" && (
-            <TextInput style={styles.input} placeholder="Tìm kiếm user..." value={userSearch} onChangeText={setUserSearch} />
-          )}
+                {participantType === "TEAM" && (
+                  <View style={styles.inputGroup}>
+                    <SelectModal
+                      data={teams.map(t => ({ label: t.teamName, value: t.id }))}
+                      value={selectedTeam?.id || ""}
+                      onChange={id => setSelectedTeam(teams.find(t => t.id === id) || null)}
+                      placeholder="Chọn nhóm"
+                      title="Chọn nhóm"
+                    />
+                  </View>
+                )}
 
-          {participantType === "TEAM" && (
-            <SelectModal
-              data={teams.map(t => ({ label: t.teamName, value: t.id }))}
-              value={selectedTeam?.id || ""}
-              onChange={id => setSelectedTeam(teams.find(t => t.id === id) || null)}
-              placeholder="Chọn team"
-              title="Chọn team"
-            />
-          )}
-          {participantType === "UNIT" && (
-            <SelectModal
-              data={units.map(u => ({ label: u.unitName, value: u.id }))}
-              value={selectedUnit?.id || ""}
-              onChange={id => setSelectedUnit(units.find(u => u.id === id) || null)}
-              placeholder="Chọn unit"
-              title="Chọn unit"
-            />
-          )}
+                {participantType === "UNIT" && (
+                  <View style={styles.inputGroup}>
+                    <SelectModal
+                      data={units.map(u => ({ label: u.unitName, value: u.id }))}
+                      value={selectedUnit?.id || ""}
+                      onChange={id => setSelectedUnit(units.find(u => u.id === id) || null)}
+                      placeholder="Chọn đơn vị"
+                      title="Chọn đơn vị"
+                    />
+                  </View>
+                )}
 
-          <TouchableOpacity style={{backgroundColor:'#007AFF',borderRadius:8,paddingVertical:13,alignItems:'center',marginTop:8,marginBottom:8,shadowColor:'#000',shadowOffset:{width:0,height:2},shadowOpacity:0.12,shadowRadius:3,elevation:2}} onPress={handleAddParticipant}>
-            <Text style={{color:'white',fontWeight:'bold',fontSize:16,letterSpacing:1}}>Thêm người tham gia</Text>
-          </TouchableOpacity>
+                <TouchableOpacity style={styles.addButton} onPress={handleAddParticipant}>
+                  <Text style={styles.addButtonText}>+ Thêm người tham gia</Text>
+                </TouchableOpacity>
 
-          {participantType==="USER" && userResults.length>0 && (
-            <FlatList data={userResults} keyExtractor={i=>i.id.toString()} scrollEnabled={false} nestedScrollEnabled={false}
-              style={{maxHeight:150,marginVertical:10}}
-              renderItem={({item})=>{
-                const sel=selectedUsers.some(u=>u.id===item.id);
-                return (
-                  <TouchableOpacity style={styles.resultItem} onPress={()=>toggleSelectUser(item)}>
-                    <View style={styles.resultRow}>
-                      <Text style={styles.resultText}>{item.name}</Text>
-                      {sel&&<Text style={styles.checkMark}>✓</Text>}
+                {participantType === "USER" && userResults.length > 0 && (
+                  <View style={styles.userSearchResults}>
+                    <FlatList 
+                      data={userResults} 
+                      keyExtractor={i => i.id.toString()} 
+                      scrollEnabled={false} 
+                      nestedScrollEnabled={false}
+                      style={{ maxHeight: 200 }}
+                      renderItem={({ item }) => {
+                        const sel = selectedUsers.some(u => u.id === item.id);
+                        return (
+                          <TouchableOpacity 
+                            style={[styles.resultItem, sel && styles.resultItemSelected]} 
+                            onPress={() => toggleSelectUser(item)}
+                          >
+                            <View style={styles.resultRow}>
+                              <Text style={[styles.resultText, sel && styles.resultTextSelected]}>
+                                {item.name}
+                              </Text>
+                              {sel && <Text style={styles.checkMark}>✓</Text>}
+                            </View>
+                          </TouchableOpacity>
+                        );
+                      }}
+                    />
+                  </View>
+                )}
+
+                {/* Participants List */}
+                <View style={styles.participantsList}>
+                  <Text style={styles.participantsTitle}>Danh sách người tham gia</Text>
+                  {participants.length === 0 ? (
+                    <View style={styles.emptyState}>
+                      <Text style={styles.emptyStateText}>Chưa có người tham gia nào</Text>
                     </View>
-                  </TouchableOpacity>
-                );
-              }}
-            />
-          )}
+                  ) : (
+                    participants.map((p, idx) => (
+                      <View key={idx} style={styles.participantItem}>
+                        <View style={styles.participantInfo}>
+                          <Text style={styles.participantName}>{p.participantName}</Text>
+                          <Text style={styles.participantType}>{
+                            p.participantType === 'USER' ? 'Người dùng' : 
+                            p.participantType === 'TEAM' ? 'Nhóm' : 'Đơn vị'
+                          }</Text>
+                        </View>
+                        <TouchableOpacity 
+                          onPress={() => handleRemoveParticipant(idx)} 
+                          style={styles.removeButton}
+                        >
+                          <Text style={styles.removeButtonText}>×</Text>
+                        </TouchableOpacity>
+                      </View>
+                    ))
+                  )}
+                </View>
+              </View>
 
-          <View style={styles.participantBox}>
-            <Text style={styles.label}>Danh sách người tham gia</Text>
-            {participants.length === 0 && (
-              <Text style={{ color: "#888", marginBottom: 8 }}>Chưa có người tham gia</Text>
-            )}
-            {participants.map((p,idx)=>(
-              <View key={idx} style={{flexDirection:'row',alignItems:'center',marginBottom:6,backgroundColor:'#f7fafd',borderRadius:14,paddingVertical:6,paddingHorizontal:10,borderWidth:1,borderColor:'#e0e7ef'}}>
-                <Text style={{flex:1,fontWeight:'500',fontSize:15,color:'#222'}} numberOfLines={1}>{p.participantName}</Text>
-                <TouchableOpacity onPress={()=>handleRemoveParticipant(idx)} style={{marginLeft:6}}>
-                  <Text style={{color:'#FF3B30',fontWeight:'bold'}}>Xóa</Text>
+              {/* Submit Button */}
+              <View style={styles.submitContainer}>
+                <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
+                  <Text style={styles.submitButtonText}>Cập nhật hoạt động</Text>
                 </TouchableOpacity>
               </View>
-            ))}
-          </View>
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
 
-          <View style={{marginTop:20}}>
-            <TouchableOpacity style={{backgroundColor:'#007AFF',borderRadius:8,paddingVertical:15,alignItems:'center',shadowColor:'#000',shadowOffset:{width:0,height:2},shadowOpacity:0.12,shadowRadius:3,elevation:2}} onPress={handleSubmit}>
-              <Text style={{color:'white',fontWeight:'bold',fontSize:18,letterSpacing:1}}>Cập nhật activity</Text>
-            </TouchableOpacity>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+      {/* Date Time Pickers */}
+      <DateTimePickerModal 
+        isVisible={isStartPickerVisible} 
+        mode="datetime" 
+        is24Hour
+        onConfirm={(d) => { setStartTime(d); setIsStartPickerVisible(false); }}
+        onCancel={() => setIsStartPickerVisible(false)} 
+      />
+
+      <DateTimePickerModal 
+        isVisible={isEndPickerVisible} 
+        mode="datetime" 
+        is24Hour
+        onConfirm={(d) => { 
+          if (d > startTime) {
+            setEndTime(d); 
+          } else {
+            Alert.alert("Lỗi", "Thời gian kết thúc phải lớn hơn thời gian bắt đầu!");
+          }
+          setIsEndPickerVisible(false); 
+        }}
+        onCancel={() => setIsEndPickerVisible(false)} 
+      />
     </Layout>
   );
 }
 
 const styles = StyleSheet.create({
-  container:{padding:20,backgroundColor:"#CFE2FF",paddingBottom:120},
-  title:{fontSize:24,fontWeight:"bold",color:"#007AFF",textAlign:"center",marginBottom:20},
-  label:{fontSize:15,fontWeight:"600",marginBottom:5},
-  input:{height:48,borderWidth:1,borderColor:"#e3e8ef",borderRadius:8,paddingHorizontal:12,backgroundColor:"#fff",marginBottom:15,justifyContent:"center",shadowColor:"#000",shadowOffset:{width:0,height:1},shadowOpacity:0.06,shadowRadius:2,elevation:1},
-  textArea:{height:80,textAlignVertical:"top"},
-  timePicker:{backgroundColor:"#fff",borderWidth:1,borderColor:"#007AFF",borderRadius:8,padding:12,alignItems:"center",marginBottom:15,shadowColor:"#000",shadowOffset:{width:0,height:2},shadowOpacity:0.1,shadowRadius:3,elevation:2},
-  timeText:{fontSize:16,color:"#007AFF",fontWeight:"600"},
-  row:{flexDirection:"row",marginBottom:10},
-  typeBtn:{flex:1,borderWidth:1,borderColor:"#007AFF",borderRadius:8,padding:10,marginHorizontal:2,alignItems:"center",backgroundColor:"#fff",shadowColor:"#000",shadowOffset:{width:0,height:1},shadowOpacity:0.05,shadowRadius:1,elevation:1},
-  typeBtnActive:{backgroundColor:"#007AFF"},
-  resultItem:{paddingVertical:8,paddingHorizontal:12,borderBottomWidth:1,borderBottomColor:"#eee"},
-  resultRow:{flexDirection:"row",justifyContent:"space-between",alignItems:"center"},
-  resultText:{flex:1},
-  checkMark:{fontSize:18,color:"#007AFF",marginLeft:8},
-  partRow:{flexDirection:"row",alignItems:"center",marginBottom:5},
-  partText:{flex:1},
-  removeText:{color:"red"},
-  participantBox: {
-    backgroundColor: "#fff",
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 15,
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#F8FAFC',
+  },
+  container: {
+    paddingBottom: 40,
+  },
+  header: {
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 24,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#1F2937',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 16,
+    color: '#6B7280',
+    textAlign: 'center',
+    fontWeight: '400',
+  },
+  formContainer: {
+    flex: 1,
+    backgroundColor: '#F8FAFC',
+  },
+  section: {
+    backgroundColor: '#FFFFFF',
+    marginHorizontal: 16,
+    marginTop: 16,
+    borderRadius: 12,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 16,
+  },
+  inputGroup: {
+    marginBottom: 16,
+  },
+  label: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 8,
+  },
+  input: {
+    height: 50,
     borderWidth: 1,
-    borderColor: "#e3e8ef",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 3,
-    elevation: 2,
+    borderColor: '#D1D5DB',
+    borderRadius: 10,
+    paddingHorizontal: 16,
+    backgroundColor: '#FFFFFF',
+    fontSize: 16,
+    color: '#1F2937',
+  },
+  textArea: {
+    height: 100,
+    textAlignVertical: 'top',
+    paddingTop: 16,
+  },
+  timeRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  timeItem: {
+    flex: 1,
+  },
+  timePicker: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#3B82F6',
+    borderRadius: 10,
+    padding: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 50,
+  },
+  timeText: {
+    fontSize: 16,
+    color: '#3B82F6',
+    fontWeight: '600',
+  },
+  participantTypeContainer: {
+    marginBottom: 16,
+  },
+  typeButtonRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  typeBtn: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: '#3B82F6',
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+  },
+  typeBtnActive: {
+    backgroundColor: '#3B82F6',
+  },
+  typeBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#3B82F6',
+  },
+  typeBtnTextActive: {
+    color: '#FFFFFF',
+  },
+  addButton: {
+    backgroundColor: '#10B981',
+    borderRadius: 10,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  addButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  userSearchResults: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 8,
+    marginTop: 8,
+    maxHeight: 200,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  resultItem: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  resultItemSelected: {
+    backgroundColor: '#EBF8FF',
+  },
+  resultRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  resultText: {
+    flex: 1,
+    fontSize: 16,
+    color: '#374151',
+  },
+  resultTextSelected: {
+    color: '#3B82F6',
+    fontWeight: '600',
+  },
+  checkMark: {
+    fontSize: 18,
+    color: '#10B981',
+    fontWeight: 'bold',
+  },
+  participantsList: {
+    marginTop: 16,
+  },
+  participantsTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 12,
+  },
+  emptyState: {
+    paddingVertical: 20,
+    alignItems: 'center',
+  },
+  emptyStateText: {
+    fontSize: 16,
+    color: '#9CA3AF',
+    fontStyle: 'italic',
+  },
+  participantItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  participantInfo: {
+    flex: 1,
+  },
+  participantName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 2,
+  },
+  participantType: {
+    fontSize: 12,
+    color: '#6B7280',
+    fontWeight: '500',
+  },
+  removeButton: {
+    backgroundColor: '#EF4444',
+    borderRadius: 20,
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 12,
+  },
+  removeButtonText: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  submitContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 24,
+  },
+  submitButton: {
+    backgroundColor: '#3B82F6',
+    borderRadius: 12,
+    paddingVertical: 16,
+    alignItems: 'center',
+    shadowColor: '#3B82F6',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 4.65,
+    elevation: 8,
+  },
+  submitButtonText: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '700',
   },
 });
