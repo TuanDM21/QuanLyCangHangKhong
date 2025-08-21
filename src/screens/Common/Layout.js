@@ -19,11 +19,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#cfe2ff",
-    paddingHorizontal: 10,
+    paddingHorizontal: 0, // Loại bỏ padding ngang để tận dụng toàn bộ màn hình
   },
   content: {
     flex: 1,
-    marginBottom: 60,
+    marginBottom: 50, // Giảm margin bottom vì footer sẽ nhỏ hơn
   },
 });
 

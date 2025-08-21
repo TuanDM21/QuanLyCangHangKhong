@@ -45,6 +45,12 @@ import SearchActivityScreen from "../screens/Activity/SearchActivityScreen";
 import EditActivityScreen from "../screens/Activity/EditActivityScreen";
 import MyActivitiesScreen from "../screens/Activity/MyActivitiesScreen";
 
+// Job screens
+import JobScreen from "../screens/Job/JobScreen";
+import CreateJobScreen from "../screens/Job/CreateJobScreen";
+import MyJobsScreen from "../screens/Job/MyJobsScreen";
+import SearchJobScreen from "../screens/Job/SearchJobScreen";
+import JobReportsScreen from "../screens/Job/JobReportsScreen";
 
 // Notification screens
 import NotificationScreen from "../screens/Notification/NotificationScreen";
@@ -85,14 +91,17 @@ const AppNavigator = () => {
             <Stack.Screen name="SearchActivityScreen" component={SearchActivityScreen} />
             <Stack.Screen name="EditActivityScreen" component={EditActivityScreen} />
             <Stack.Screen name="MyActivitiesScreen" component={MyActivitiesScreen} />
+            <Stack.Screen name="JobScreen" component={JobScreen} />
+            <Stack.Screen name="CreateJobScreen" component={CreateJobScreen} />
+            <Stack.Screen name="MyJobsScreen" component={MyJobsScreen} />
+            <Stack.Screen name="SearchJobScreen" component={SearchJobScreen} />
+            <Stack.Screen name="JobReportsScreen" component={JobReportsScreen} />
             <Stack.Screen name="NotificationScreen" component={NotificationScreen} />
             <Stack.Screen name="MyScheduleScreen" component={MyScheduleScreen} />
             <Stack.Screen name="UpdateUserFlightShiftScreen" component={UpdateUserFlightShiftScreen} />
             <Stack.Screen name="LiveTrackingMapScreen" component={LiveTrackingMapScreen} />
             <Stack.Screen name="MyShiftScreen" component={MyShiftScreen} />
             <Stack.Screen name="NotificationCenterScreen" component={NotificationCenterScreen} />
-
-            
           </>
         )}
       </Stack.Navigator>

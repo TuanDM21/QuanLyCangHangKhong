@@ -8,24 +8,19 @@ import {
   StatusBar,
   SafeAreaView,
   ActivityIndicator,
-  Image,
   StyleSheet,
   Dimensions,
 } from "react-native";
-import MaterialIcons from "react-native-vector-icons/MaterialIcons";
+import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { useAuth } from "../../context/AuthContext";
-import Ionicons from "react-native-vector-icons/Ionicons";
 
 const { width } = Dimensions.get('window');
-
 const BACKEND_URL = "http://10.0.10.32:8080";
-// const BACKEND_URL = "http://192.168.1.6:8080";
 // const BACKEND_URL = "http://172.20.10.2:8080";
-
-
-
+// const BACKEND_URL = "http://192.168.0.120:8080";
+// const BACKEND_URL = "http://192.168.1.12:8080";
 
 const Header = () => {
   const [notificationModalVisible, setNotificationModalVisible] = useState(false);
@@ -167,7 +162,7 @@ const Header = () => {
             activeOpacity={0.8}
           >
             <View style={[styles.iconContainer, styles.notificationButton]}>
-              <Ionicons name="notifications" size={22} color="#FFFFFF" />
+              <Ionicons name="notifications" size={18} color="#FFFFFF" />
               {unreadCount > 0 && (
                 <View style={styles.badge}>
                   <Text style={styles.badgeText}>
@@ -185,7 +180,7 @@ const Header = () => {
             activeOpacity={0.8}
           >
             <View style={[styles.iconContainer, styles.profileButton]}>
-              <Ionicons name="person" size={22} color="#FFFFFF" />
+              <Ionicons name="person" size={18} color="#FFFFFF" />
             </View>
           </TouchableOpacity>
         </View>
@@ -352,92 +347,105 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingHorizontal: 12, // Giảm từ 16 xuống 12
+    paddingVertical: 6,    // Giảm từ 12 xuống 6
     backgroundColor: "#1E3A8A",
+    minHeight: 45,         // Giảm từ 60 xuống 45
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: 1,           // Giảm shadow
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 5,
+    shadowOpacity: 0.08,   // Giảm shadow opacity
+    shadowRadius: 2,       // Giảm shadow radius
+    elevation: 3,          // Giảm elevation
   },
   logoContainer: {
     flex: 1,
     marginRight: 16,
+    justifyContent: "center",
+    maxWidth: width * 0.65,
   },
   logoDesign: {
     flexDirection: "column",
     justifyContent: "center",
+    alignItems: "flex-start",
   },
   acvBrand: {
     flexDirection: "column",
     alignItems: "flex-start",
+    width: "100%",
   },
   acvMainText: {
-    fontSize: 28,
+    fontSize: 18,          // Giảm từ 24 xuống 18
     fontWeight: "900",
     color: "#FFFFFF",
-    letterSpacing: 1.5,
+    letterSpacing: 1.0,    // Giảm letter spacing
     textShadowColor: "rgba(0,0,0,0.3)",
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 3,
-    marginBottom: 4,
+    marginBottom: 2,       // Giảm margin
+    lineHeight: 20,        // Giảm line height
   },
   companyInfo: {
     flexDirection: "column",
     alignItems: "flex-start",
+    width: "100%",
   },
   companyVietText: {
-    fontSize: 10,
+    fontSize: 8,           // Giảm từ 9 xuống 8
     fontWeight: "700",
     color: "#FFFFFF",
-    lineHeight: 12,
-    marginBottom: 2,
-    letterSpacing: 0.4,
+    lineHeight: 9,         // Giảm line height
+    marginBottom: 1,       // Giảm margin
+    letterSpacing: 0.2,    // Giảm letter spacing
+    textTransform: "uppercase",
   },
   dividerLine: {
     height: 1.5,
     backgroundColor: "#60A5FA",
-    width: 120,
+    width: "100%",
+    maxWidth: 140,
     marginVertical: 1,
   },
   companyEngText: {
-    fontSize: 9,
+    fontSize: 7,           // Giảm từ 8 xuống 7
     fontWeight: "600",
     color: "#E0E7FF",
-    lineHeight: 11,
-    letterSpacing: 0.6,
-    marginTop: 1,
+    lineHeight: 8,         // Giảm line height
+    letterSpacing: 0.3,    // Giảm letter spacing
+    marginTop: 0,          // Loại bỏ margin top
+    textTransform: "uppercase",
   },
   actionsContainer: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    gap: 8,
+    minWidth: 100,
+    justifyContent: "flex-end",
   },
   actionButton: {
-    width: 44,
-    height: 44,
+    width: 36,             // Giảm từ 44 xuống 36
+    height: 36,            // Giảm từ 44 xuống 36
     justifyContent: "center",
     alignItems: "center",
+    borderRadius: 18,      // Cập nhật border radius
   },
   iconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 32,             // Giảm từ 40 xuống 32
+    height: 32,            // Giảm từ 40 xuống 32
+    borderRadius: 16,      // Cập nhật border radius
     justifyContent: "center",
     alignItems: "center",
     position: "relative",
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
-      height: 1,
+      height: 1,           // Giảm shadow
     },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-    elevation: 3,
+    shadowOpacity: 0.15,   // Giảm shadow opacity
+    shadowRadius: 2,       // Giảm shadow radius
+    elevation: 2,          // Giảm elevation
   },
   notificationButton: {
     backgroundColor: "#F59E0B",
@@ -451,75 +459,79 @@ const styles = StyleSheet.create({
   },
   badge: {
     position: "absolute",
-    top: -4,
-    right: -4,
+    top: -6,
+    right: -6,
     backgroundColor: "#EF4444",
-    borderRadius: 10,
+    borderRadius: 12,
     minWidth: 20,
     height: 20,
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 2,
     borderColor: "#FFFFFF",
-    shadowColor: "#000",
+    shadowColor: "#EF4444",
     shadowOffset: {
       width: 0,
-      height: 1,
+      height: 2,
     },
-    shadowOpacity: 0.3,
-    shadowRadius: 2,
-    elevation: 4,
+    shadowOpacity: 0.4,
+    shadowRadius: 3,
+    elevation: 6,
+    zIndex: 10,
   },
   badgeText: {
     color: "white",
     fontSize: 10,
-    fontWeight: "bold",
+    fontWeight: "700",
+    textAlign: "center",
+    lineHeight: 12,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.6)",
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
     justifyContent: "flex-end",
   },
   notificationModal: {
     backgroundColor: "#FFFFFF",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    maxHeight: "80%",
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: "85%",
+    minHeight: "50%",
     paddingBottom: 20,
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
       height: -4,
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 10,
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 12,
   },
   userModal: {
     backgroundColor: "#FFFFFF",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
     paddingBottom: 20,
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
       height: -4,
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 10,
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 12,
   },
   modalHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 20,
-    paddingVertical: 18,
+    paddingVertical: 16,
     borderBottomWidth: 1,
     borderBottomColor: "#F3F4F6",
     backgroundColor: "#FAFBFC",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
   },
   modalTitleContainer: {
     flexDirection: "row",

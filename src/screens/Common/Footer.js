@@ -25,11 +25,17 @@ const Footer = () => {
       route: 'ActivityScreen',
     },
     {
-      id: 'flight',
-      icon: 'airplane',
-      label: 'Chuyến bay',
-      route: 'FlightScreen',
+      id: 'job',
+      icon: 'construct',
+      label: 'Công việc',
+      route: 'JobScreen',
     },
+    // {
+    //   id: 'flight',
+    //   icon: 'airplane',
+    //   label: 'Chuyến bay',
+    //   route: 'FlightScreen',
+    // },
     {
       id: 'home',
       icon: 'home',
@@ -66,7 +72,7 @@ const Footer = () => {
         <View style={[styles.iconContainer, isActive && styles.activeIconContainer]}>
           <Ionicons 
             name={isActive ? item.icon : `${item.icon}-outline`} 
-            size={22} 
+            size={18}              // Giảm từ 22 xuống 18
             color={isActive ? "#FFFFFF" : "#64748B"} 
           />
         </View>
@@ -89,7 +95,7 @@ const Footer = () => {
         <View style={styles.toggleButtonContainer}>
           <Ionicons 
             name={isVisible ? "chevron-down" : "chevron-up"} 
-            size={20} 
+            size={16}              // Giảm từ 20 xuống 16
             color="#FFFFFF" 
           />
         </View>
@@ -108,26 +114,26 @@ const Footer = () => {
 const styles = StyleSheet.create({
   toggleButton: {
     position: "absolute",
-    bottom: 84,
+    bottom: 54,            // Giảm từ 84 xuống 54 (footer nhỏ hơn)
     right: 20,
     zIndex: 1000,
   },
   toggleButtonContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 40,             // Giảm từ 48 xuống 40
+    height: 40,            // Giảm từ 48 xuống 40
+    borderRadius: 20,      // Cập nhật border radius
     backgroundColor: "#1E3A8A",
     justifyContent: "center",
     alignItems: "center",
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
-      height: 4,
+      height: 2,           // Giảm shadow
     },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 8,
-    borderWidth: 2,
+    shadowOpacity: 0.2,    // Giảm shadow opacity
+    shadowRadius: 4,       // Giảm shadow radius
+    elevation: 5,          // Giảm elevation
+    borderWidth: 1,        // Giảm border width
     borderColor: "#3B82F6",
   },
   footer: {
@@ -136,20 +142,20 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     backgroundColor: "#FFFFFF",
-    borderTopWidth: 2,
+    borderTopWidth: 1,     // Giảm từ 2 xuống 1
     borderTopColor: "#1E3A8A",
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
-      height: -4,
+      height: -2,          // Giảm shadow
     },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 15,
+    shadowOpacity: 0.1,    // Giảm shadow opacity
+    shadowRadius: 6,       // Giảm shadow radius
+    elevation: 8,          // Giảm elevation
   },
   menuContainer: {
     flexDirection: "row",
-    paddingVertical: 12,
+    paddingVertical: 6,    // Giảm từ 12 xuống 6
     paddingHorizontal: 8,
     backgroundColor: "#FFFFFF",
   },
@@ -157,9 +163,9 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 10,
+    paddingVertical: 4,    // Giảm từ 10 xuống 4
     paddingHorizontal: 4,
-    borderRadius: 16,
+    borderRadius: 12,      // Giảm từ 16 xuống 12
     position: "relative",
     marginHorizontal: 2,
   },
@@ -169,13 +175,13 @@ const styles = StyleSheet.create({
     borderColor: "#C7D2FE",
   },
   iconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 32,             // Giảm từ 40 xuống 32
+    height: 32,            // Giảm từ 40 xuống 32
+    borderRadius: 16,      // Cập nhật border radius
     backgroundColor: "transparent",
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 4,
+    marginBottom: 2,       // Giảm từ 4 xuống 2
   },
   activeIconContainer: {
     backgroundColor: "#1E3A8A",
@@ -191,11 +197,11 @@ const styles = StyleSheet.create({
     borderColor: "#3B82F6",
   },
   menuText: {
-    fontSize: 11,
+    fontSize: 10,          // Giảm từ 11 xuống 10
     fontWeight: "600",
     color: "#64748B",
     textAlign: "center",
-    lineHeight: 14,
+    lineHeight: 12,        // Giảm từ 14 xuống 12
   },
   activeMenuText: {
     color: "#1E3A8A",
